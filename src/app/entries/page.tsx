@@ -35,7 +35,11 @@ export default function EntriesPage() {
         <section key={g.date}>
           <h2>{formatDate(g.date)}</h2>
           {g.items.map((e) => (
-            <Link href={`/entries/${e.id}`} key={e.id} className="entry-item">
+            <Link
+              href={`/entries/edit?id=${e.id}`}
+              key={e.id}
+              className="entry-item"
+            >
               <div className="entry-top">
                 <span>{e.machines?.name ?? "Unknown machine"}</span>
                 <span className="entry-hours">
