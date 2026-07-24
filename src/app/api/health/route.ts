@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/config";
+import { envPassword } from "@/lib/auth";
 
 // Diagnostic endpoint: reports the configuration the running deployment
 // actually resolves, without exposing secret values. Used to tell apart
@@ -38,7 +39,8 @@ export async function GET() {
     raw: {
       supabaseUrl: describe(process.env.NEXT_PUBLIC_SUPABASE_URL),
       supabaseAnonKey: describe(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
-      appPassword: { set: Boolean(process.env.APP_PASSWORD) },
+      appPassword: { set: envPassword("APP_PASSWORD").length > 0 },
+      adminPassword: { set: envPassword("APP_ADMIN_PASSWORD").length > 0 },
       relatedEnvNames: relatedNames,
     },
     vercelEnv: process.env.VERCEL_ENV ?? null,

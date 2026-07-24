@@ -360,6 +360,14 @@ button {
   flex-wrap: wrap;
 }
 
+.admin-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: -6px 0 12px;
+}
+
 .inactive-name {
   color: var(--muted);
   text-decoration: line-through;

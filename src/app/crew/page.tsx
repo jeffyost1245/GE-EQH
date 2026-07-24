@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import AppShell from "@/components/AppShell";
+import LockAdmin from "@/components/LockAdmin";
 import {
   addCrewMember,
   crewEntryCount,
@@ -175,6 +176,10 @@ export default function CrewPage() {
 
   return (
     <AppShell title="Crew">
+      <div className="admin-bar">
+        <span className="muted small">Admin unlocked</span>
+        <LockAdmin />
+      </div>
       {error && <p className="error">{error}</p>}
       {info && <p className="notice">{info}</p>}
       <form className="card row" onSubmit={add}>
