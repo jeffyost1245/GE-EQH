@@ -51,9 +51,6 @@ export default function LoginPage() {
           {busy ? "Checking…" : "Enter"}
         </button>
       </form>
-      <a href="/install" className="install-link">
-        📱 Put this on your phone
-      </a>
     </div>
   );
 }

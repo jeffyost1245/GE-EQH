@@ -360,65 +360,6 @@ button {
   flex-wrap: wrap;
 }
 
-.install-hint {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  background: #e8f0fe;
-  border-radius: 10px;
-  padding: 9px 8px 9px 12px;
-  margin-bottom: 12px;
-}
-
-.install-hint a {
-  color: var(--accent);
-  font-size: 14.5px;
-  font-weight: 700;
-  text-decoration: none;
-}
-
-.install-hint button {
-  background: none;
-  border: none;
-  color: var(--muted);
-  font-size: 17px;
-  padding: 4px 8px;
-  line-height: 1;
-}
-
-.steps {
-  margin: 4px 0 0;
-  padding-left: 26px;
-}
-
-.steps li {
-  font-size: 17px;
-  margin-bottom: 16px;
-  line-height: 1.5;
-}
-
-.steps li::marker {
-  font-weight: 800;
-  color: var(--accent);
-}
-
-.step-icon {
-  font-size: 22px;
-  margin-left: 6px;
-  vertical-align: middle;
-}
-
-.install-link {
-  display: block;
-  text-align: center;
-  margin-top: 18px;
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--accent);
-  text-decoration: none;
-}
-
 .admin-bar {
   display: flex;
   align-items: center;

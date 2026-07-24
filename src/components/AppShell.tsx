@@ -1,4 +1,3 @@
-import InstallHint from "./InstallHint";
 import Nav from "./Nav";
 import SyncStatus from "./SyncStatus";
 
@@ -12,7 +11,6 @@ export default function AppShell({
   return (
     <div className="shell">
       <SyncStatus />
-      <InstallHint />
       <h1>{title}</h1>
       {children}
       <Nav />

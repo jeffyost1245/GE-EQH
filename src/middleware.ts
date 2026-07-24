@@ -43,6 +43,6 @@ export async function middleware(req: NextRequest) {
 export const config = {
   // Everything except the login screens, their APIs, and static assets.
   matcher: [
-    "/((?!login|install|api/login|api/health|_next/static|_next/image|favicon.ico|icons/|apple-touch-icon.png|manifest.webmanifest).*)",
+    "/((?!login|api/login|api/health|_next/static|_next/image|favicon.ico|icons/|apple-touch-icon.png|manifest.webmanifest).*)",
   ],
 };
