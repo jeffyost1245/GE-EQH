@@ -18,6 +18,6 @@ export async function middleware(req: NextRequest) {
 export const config = {
   // Everything except the login screen, its API, and static assets.
   matcher: [
-    "/((?!login|api/login|_next/static|_next/image|favicon.ico|icon.svg|manifest.webmanifest).*)",
+    "/((?!login|api/login|api/health|_next/static|_next/image|favicon.ico|icon.svg|manifest.webmanifest).*)",
   ],
 };
