@@ -140,6 +140,12 @@ button {
   border: 1.5px solid var(--accent);
 }
 
+.btn-danger {
+  background: #fff;
+  color: var(--red);
+  border: 1.5px solid var(--red);
+}
+
 .btn-small {
   display: inline-block;
   width: auto;
@@ -339,12 +345,19 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  flex-wrap: wrap;
   padding: 12px 2px;
   border-bottom: 1px solid var(--line);
 }
 
 .list-row:last-child {
   border-bottom: none;
+}
+
+.row-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .inactive-name {

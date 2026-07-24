@@ -37,6 +37,33 @@ export async function setMachineStatus(
   if (error) throw error;
 }
 
+export async function renameMachine(id: string, name: string): Promise<void> {
+  const { error } = await getSupabase()
+    .from("machines")
+    .update({ name })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function machineEntryCount(id: string): Promise<number> {
+  const { count, error } = await getSupabase()
+    .from("entries")
+    .select("id", { count: "exact", head: true })
+    .eq("machine_id", id);
+  if (error) throw error;
+  return count ?? 0;
+}
+
+/**
+ * Hard-delete a machine. Only safe when it has no entries — history must
+ * never be orphaned. Callers check machineEntryCount first; the DB's
+ * foreign key is the backstop if they don't.
+ */
+export async function deleteMachine(id: string): Promise<void> {
+  const { error } = await getSupabase().from("machines").delete().eq("id", id);
+  if (error) throw error;
+}
+
 // ---------- crew ----------
 
 export async function listCrew(activeOnly = false): Promise<CrewMember[]> {
@@ -60,6 +87,35 @@ export async function setCrewStatus(
     .from("crew")
     .update({ status })
     .eq("id", id);
+  if (error) throw error;
+}
+
+export async function renameCrewMember(
+  id: string,
+  name: string
+): Promise<void> {
+  const { error } = await getSupabase()
+    .from("crew")
+    .update({ name })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function crewEntryCount(id: string): Promise<number> {
+  const { count, error } = await getSupabase()
+    .from("entries")
+    .select("id", { count: "exact", head: true })
+    .eq("crew_member_id", id);
+  if (error) throw error;
+  return count ?? 0;
+}
+
+/**
+ * Hard-delete a crew member. Only safe when they have no entries — their
+ * logged hours must never be orphaned. Callers check crewEntryCount first.
+ */
+export async function deleteCrewMember(id: string): Promise<void> {
+  const { error } = await getSupabase().from("crew").delete().eq("id", id);
   if (error) throw error;
 }
 
