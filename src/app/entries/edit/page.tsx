@@ -1,16 +1,19 @@
 "use client";
 
 // Edit any entry after the fact — wrong hours, wrong date, late notes.
-// Also the place to close out an open entry. Saves bump updated_at.
+// Also the place to close out an open entry (fill in end hours). Saves
+// bump updated_at. Uses a query param (?id=) rather than a bracketed
+// dynamic route so it deploys reliably.
 
-import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import AppShell from "@/components/AppShell";
 import { getEntry, listCrew, listMachines, saveEntryUpdate } from "@/lib/data";
 import { CrewMember, EntryWithNames, Machine } from "@/lib/types";
 
-export default function EditEntryPage() {
-  const { id } = useParams<{ id: string }>();
+function EditEntry() {
+  const searchParams = useSearchParams();
+  const id = searchParams.get("id") ?? "";
   const router = useRouter();
 
   const [entry, setEntry] = useState<EntryWithNames | null>(null);
@@ -31,6 +34,10 @@ export default function EditEntryPage() {
   const [savedQueued, setSavedQueued] = useState(false);
 
   useEffect(() => {
+    if (!id) {
+      setLoadError("No entry selected.");
+      return;
+    }
     (async () => {
       try {
         const [e, m, c] = await Promise.all([
@@ -193,5 +200,13 @@ export default function EditEntryPage() {
         </form>
       )}
     </AppShell>
+  );
+}
+
+export default function EditEntryPage() {
+  return (
+    <Suspense fallback={<AppShell title="Edit Entry">Loading…</AppShell>}>
+      <EditEntry />
+    </Suspense>
   );
 }
