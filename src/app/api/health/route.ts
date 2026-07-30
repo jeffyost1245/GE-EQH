@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/config";
-import { envPassword } from "@/lib/auth";
+import { envValue } from "@/lib/auth";
 
 // Diagnostic endpoint: reports the configuration the running deployment
 // actually resolves, without exposing secret values. Used to tell apart
@@ -34,13 +34,14 @@ export async function GET() {
       keyLooksValid:
         SUPABASE_ANON_KEY.split(".").length === 3 &&
         !/\s/.test(SUPABASE_ANON_KEY),
+      // Crew and admin passwords live in the database now, one pair per
+      // foreman; this only signs session cookies.
+      sessionSecretSet: envValue("APP_PASSWORD").length > 0,
     },
     // The raw environment, for spotting typos and stray whitespace.
     raw: {
       supabaseUrl: describe(process.env.NEXT_PUBLIC_SUPABASE_URL),
       supabaseAnonKey: describe(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
-      appPassword: { set: envPassword("APP_PASSWORD").length > 0 },
-      adminPassword: { set: envPassword("APP_ADMIN_PASSWORD").length > 0 },
       relatedEnvNames: relatedNames,
     },
     vercelEnv: process.env.VERCEL_ENV ?? null,

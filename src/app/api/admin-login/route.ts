@@ -1,23 +1,48 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ADMIN_COOKIE, adminToken, envPassword } from "@/lib/auth";
+import {
+  ADMIN_COOKIE,
+  SESSION_COOKIE,
+  makeAdminCookie,
+  readSessionCookie,
+} from "@/lib/auth";
+import { getSupabase } from "@/lib/supabase";
 
 export async function POST(req: NextRequest) {
-  const { password } = await req.json().catch(() => ({ password: "" }));
-  const expected = envPassword("APP_ADMIN_PASSWORD");
-  if (!expected) {
+  // Unlock the crew you're signed in as — never one named by the caller.
+  const foremanId = await readSessionCookie(
+    req.cookies.get(SESSION_COOKIE)?.value
+  );
+  if (!foremanId) {
     return NextResponse.json(
-      { ok: false, error: "Admin password is not configured yet." },
-      { status: 500 }
+      { ok: false, error: "Sign in first." },
+      { status: 401 }
     );
   }
-  if (typeof password !== "string" || password.trim() !== expected) {
+
+  const body = await req.json().catch(() => ({}));
+  const password = typeof body.password === "string" ? body.password : "";
+
+  const { data, error } = await getSupabase().rpc("verify_foreman_password", {
+    p_foreman: foremanId,
+    p_password: password.trim(),
+    p_kind: "admin",
+  });
+
+  if (error) {
+    return NextResponse.json(
+      { ok: false, error: "Couldn't reach the server. Try again." },
+      { status: 502 }
+    );
+  }
+  if (data !== true) {
     return NextResponse.json(
       { ok: false, error: "Wrong admin password" },
       { status: 401 }
     );
   }
+
   const res = NextResponse.json({ ok: true });
-  res.cookies.set(ADMIN_COOKIE, await adminToken(expected), {
+  res.cookies.set(ADMIN_COOKIE, await makeAdminCookie(foremanId), {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",

@@ -360,6 +360,23 @@ button {
   flex-wrap: wrap;
 }
 
+.crew-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: -8px 0 14px;
+}
+
+.crew-switch {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 700;
+  padding: 6px 4px;
+}
+
 /* ---------- checkout sheets ---------- */
 
 .sheet-preview {

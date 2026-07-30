@@ -1,39 +1,96 @@
-// Two shared passwords, no individual accounts:
-//   APP_PASSWORD       — lets the crew into the app at all
-//   APP_ADMIN_PASSWORD — additionally unlocks machine/crew management
+// Session cookies for a multi-crew app.
 //
-// Each cookie stores a SHA-256 digest of its password plus a distinct
-// salt, so middleware can recompute and compare without storing anything
-// server-side, and changing a password invalidates its existing sessions.
-// Different salts mean the crew cookie can never satisfy the admin check.
-// Edge-safe (Web Crypto only).
+// Passwords now live in the database (one pair per foreman), so the
+// middleware can't re-derive a cookie from a password the way it used to.
+// Instead each cookie carries the foreman's id alongside an HMAC of it,
+// signed with a server-only secret: the app can tell which crew you are
+// without a database round trip on every request, and the id can't be
+// swapped for another crew's without the secret.
+//
+// Edge-safe: Web Crypto only.
 
 export const SESSION_COOKIE = "eqh_session";
 export const ADMIN_COOKIE = "eqh_admin";
+/** Readable by the browser so pages know which crew's data to load. */
+export const CREW_COOKIE = "eqh_crew";
 
-const SALT = "ge-eqh-v1";
-const ADMIN_SALT = "ge-eqh-admin-v1";
+const SESSION_SALT = "ge-eqh-session-v2";
+const ADMIN_SALT = "ge-eqh-admin-v2";
 
 /**
- * Read a password from the environment, tolerating the stray whitespace
- * that pasting into a hosting dashboard tends to introduce.
+ * Read a value from the environment, tolerating the stray whitespace that
+ * pasting into a hosting dashboard tends to introduce.
  */
-export function envPassword(name: string): string {
+export function envValue(name: string): string {
   return (process.env[name] ?? "").trim();
 }
 
-async function digest(input: string): Promise<string> {
-  const bytes = new TextEncoder().encode(input);
-  const hash = await crypto.subtle.digest("SHA-256", bytes);
-  return Array.from(new Uint8Array(hash))
+/**
+ * Secret used to sign session cookies. APP_PASSWORD is no longer typed by
+ * anyone — crews use their foreman's password now — so it serves purely
+ * as the signing key, which is why it must stay set.
+ */
+function secret(): string {
+  return envValue("APP_PASSWORD");
+}
+
+async function sign(value: string, salt: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(`${salt}:${secret()}`),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const mac = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    new TextEncoder().encode(value)
+  );
+  return Array.from(new Uint8Array(mac))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
 }
 
-export function sessionToken(password: string): Promise<string> {
-  return digest(`${SALT}:${password}`);
+export async function makeSessionCookie(foremanId: string): Promise<string> {
+  return `${foremanId}.${await sign(foremanId, SESSION_SALT)}`;
 }
 
-export function adminToken(password: string): Promise<string> {
-  return digest(`${ADMIN_SALT}:${password}`);
+export async function makeAdminCookie(foremanId: string): Promise<string> {
+  return `${foremanId}.${await sign(foremanId, ADMIN_SALT)}`;
+}
+
+/**
+ * Return the foreman id a cookie vouches for, or null if it's missing,
+ * malformed, or not signed with our secret.
+ */
+async function readCookie(
+  value: string | undefined,
+  salt: string
+): Promise<string | null> {
+  if (!value || !secret()) return null;
+  const dot = value.lastIndexOf(".");
+  if (dot <= 0) return null;
+  const foremanId = value.slice(0, dot);
+  const signature = value.slice(dot + 1);
+  const expected = await sign(foremanId, salt);
+  // Constant-time-ish: compare full strings of equal length.
+  if (signature.length !== expected.length) return null;
+  let diff = 0;
+  for (let i = 0; i < expected.length; i++) {
+    diff |= signature.charCodeAt(i) ^ expected.charCodeAt(i);
+  }
+  return diff === 0 ? foremanId : null;
+}
+
+export function readSessionCookie(
+  value: string | undefined
+): Promise<string | null> {
+  return readCookie(value, SESSION_SALT);
+}
+
+export function readAdminCookie(
+  value: string | undefined
+): Promise<string | null> {
+  return readCookie(value, ADMIN_SALT);
 }

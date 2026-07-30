@@ -47,7 +47,11 @@ function SharedSheets() {
           return;
         }
 
-        const entries = await entriesForWeek(link.week_start, link.week_end);
+        const entries = await entriesForWeek(
+          link.week_start,
+          link.week_end,
+          link.foreman_id
+        );
         const withPhotos = entries.filter((e) => e.photo_path);
         const urls = await sheetPhotoUrls(
           withPhotos.map((e) => e.photo_path!)
