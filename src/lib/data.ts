@@ -3,19 +3,38 @@ import {
   CrewMember,
   Entry,
   EntryWithNames,
+  Foreman,
   Machine,
   NewEntry,
   ShareLink,
 } from "./types";
 import { dequeue, enqueue, newLocalId, pendingOps } from "./queue";
+import { requireCrewId } from "./tenant";
 
 const ENTRY_COLUMNS =
   "*, machines(name), crew(name)";
 
+// ---------- foremen ----------
+
+/**
+ * Names for the login dropdown. Goes through a database function rather
+ * than a table read: the foremen table holds password hashes and is not
+ * readable with the public key, and this returns only ids and names.
+ */
+export async function listForemen(): Promise<Foreman[]> {
+  const { data, error } = await getSupabase().rpc("list_foremen");
+  if (error) throw error;
+  return (data ?? []) as Foreman[];
+}
+
 // ---------- machines ----------
 
 export async function listMachines(activeOnly = false): Promise<Machine[]> {
-  let q = getSupabase().from("machines").select("*").order("name");
+  let q = getSupabase()
+    .from("machines")
+    .select("*")
+    .eq("foreman_id", requireCrewId())
+    .order("name");
   if (activeOnly) q = q.eq("status", "active");
   const { data, error } = await q;
   if (error) throw error;
@@ -23,7 +42,9 @@ export async function listMachines(activeOnly = false): Promise<Machine[]> {
 }
 
 export async function addMachine(name: string): Promise<void> {
-  const { error } = await getSupabase().from("machines").insert({ name });
+  const { error } = await getSupabase()
+    .from("machines")
+    .insert({ name, foreman_id: requireCrewId() });
   if (error) throw error;
 }
 
@@ -34,6 +55,7 @@ export async function setMachineStatus(
   const { error } = await getSupabase()
     .from("machines")
     .update({ status })
+    .eq("foreman_id", requireCrewId())
     .eq("id", id);
   if (error) throw error;
 }
@@ -42,6 +64,7 @@ export async function renameMachine(id: string, name: string): Promise<void> {
   const { error } = await getSupabase()
     .from("machines")
     .update({ name })
+    .eq("foreman_id", requireCrewId())
     .eq("id", id);
   if (error) throw error;
 }
@@ -50,6 +73,7 @@ export async function machineEntryCount(id: string): Promise<number> {
   const { count, error } = await getSupabase()
     .from("entries")
     .select("id", { count: "exact", head: true })
+    .eq("foreman_id", requireCrewId())
     .eq("machine_id", id);
   if (error) throw error;
   return count ?? 0;
@@ -61,14 +85,22 @@ export async function machineEntryCount(id: string): Promise<number> {
  * foreign key is the backstop if they don't.
  */
 export async function deleteMachine(id: string): Promise<void> {
-  const { error } = await getSupabase().from("machines").delete().eq("id", id);
+  const { error } = await getSupabase()
+    .from("machines")
+    .delete()
+    .eq("foreman_id", requireCrewId())
+    .eq("id", id);
   if (error) throw error;
 }
 
 // ---------- crew ----------
 
 export async function listCrew(activeOnly = false): Promise<CrewMember[]> {
-  let q = getSupabase().from("crew").select("*").order("name");
+  let q = getSupabase()
+    .from("crew")
+    .select("*")
+    .eq("foreman_id", requireCrewId())
+    .order("name");
   if (activeOnly) q = q.eq("status", "active");
   const { data, error } = await q;
   if (error) throw error;
@@ -76,7 +108,9 @@ export async function listCrew(activeOnly = false): Promise<CrewMember[]> {
 }
 
 export async function addCrewMember(name: string): Promise<void> {
-  const { error } = await getSupabase().from("crew").insert({ name });
+  const { error } = await getSupabase()
+    .from("crew")
+    .insert({ name, foreman_id: requireCrewId() });
   if (error) throw error;
 }
 
@@ -87,6 +121,7 @@ export async function setCrewStatus(
   const { error } = await getSupabase()
     .from("crew")
     .update({ status })
+    .eq("foreman_id", requireCrewId())
     .eq("id", id);
   if (error) throw error;
 }
@@ -98,6 +133,7 @@ export async function renameCrewMember(
   const { error } = await getSupabase()
     .from("crew")
     .update({ name })
+    .eq("foreman_id", requireCrewId())
     .eq("id", id);
   if (error) throw error;
 }
@@ -106,6 +142,7 @@ export async function crewEntryCount(id: string): Promise<number> {
   const { count, error } = await getSupabase()
     .from("entries")
     .select("id", { count: "exact", head: true })
+    .eq("foreman_id", requireCrewId())
     .eq("crew_member_id", id);
   if (error) throw error;
   return count ?? 0;
@@ -116,7 +153,11 @@ export async function crewEntryCount(id: string): Promise<number> {
  * logged hours must never be orphaned. Callers check crewEntryCount first.
  */
 export async function deleteCrewMember(id: string): Promise<void> {
-  const { error } = await getSupabase().from("crew").delete().eq("id", id);
+  const { error } = await getSupabase()
+    .from("crew")
+    .delete()
+    .eq("foreman_id", requireCrewId())
+    .eq("id", id);
   if (error) throw error;
 }
 
@@ -128,6 +169,7 @@ export async function latestEntryForMachine(
   const { data, error } = await getSupabase()
     .from("entries")
     .select("*")
+    .eq("foreman_id", requireCrewId())
     .eq("machine_id", machineId)
     .order("date", { ascending: false })
     .order("created_at", { ascending: false })
@@ -158,7 +200,9 @@ export async function createEntryOnline(entry: NewEntry): Promise<void> {
   const supabase = getSupabase();
   const prev = await latestEntryForMachine(entry.machine_id);
 
-  const { error } = await supabase.from("entries").insert(withoutEmptyPhoto(entry));
+  const { error } = await supabase
+    .from("entries")
+    .insert({ ...withoutEmptyPhoto(entry), foreman_id: requireCrewId() });
   if (error) throw error;
 
   if (prev && prev.end_hours === null) {
@@ -169,6 +213,7 @@ export async function createEntryOnline(entry: NewEntry): Promise<void> {
         end_hours_autofilled: true,
         updated_at: new Date().toISOString(),
       })
+      .eq("foreman_id", requireCrewId())
       .eq("id", prev.id)
       .is("end_hours", null); // don't clobber if someone filled it meanwhile
     if (backfillError) throw backfillError;
@@ -185,6 +230,7 @@ export async function updateEntryOnline(
       ...withoutEmptyPhoto(patch),
       updated_at: new Date().toISOString(),
     })
+    .eq("foreman_id", requireCrewId())
     .eq("id", id);
   if (error) throw error;
 }
@@ -257,6 +303,7 @@ export async function listEntries(limit = 100): Promise<EntryWithNames[]> {
   const { data, error } = await getSupabase()
     .from("entries")
     .select(ENTRY_COLUMNS)
+    .eq("foreman_id", requireCrewId())
     .order("date", { ascending: false })
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -268,6 +315,7 @@ export async function getEntry(id: string): Promise<EntryWithNames | null> {
   const { data, error } = await getSupabase()
     .from("entries")
     .select(ENTRY_COLUMNS)
+    .eq("foreman_id", requireCrewId())
     .eq("id", id)
     .limit(1);
   if (error) throw error;
@@ -276,11 +324,14 @@ export async function getEntry(id: string): Promise<EntryWithNames | null> {
 
 export async function entriesForWeek(
   start: string,
-  end: string
+  end: string,
+  /** Defaults to the signed-in crew; the share page passes the link's crew. */
+  foremanId?: string
 ): Promise<EntryWithNames[]> {
   const { data, error } = await getSupabase()
     .from("entries")
     .select(ENTRY_COLUMNS)
+    .eq("foreman_id", foremanId ?? requireCrewId())
     .gte("date", start)
     .lte("date", end);
   if (error) throw error;
@@ -301,6 +352,7 @@ export async function setEntryPhoto(
   const { error } = await getSupabase()
     .from("entries")
     .update({ photo_path: photoPath, updated_at: new Date().toISOString() })
+    .eq("foreman_id", requireCrewId())
     .eq("id", id);
   if (error) throw error;
 }
@@ -322,6 +374,7 @@ export async function createShareLink(
       week_start: weekStart,
       week_end: weekEnd,
       expires_at: expires.toISOString(),
+      foreman_id: requireCrewId(),
     })
     .select()
     .limit(1);

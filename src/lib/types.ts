@@ -30,8 +30,14 @@ export interface Entry {
   updated_at: string;
 }
 
+export interface Foreman {
+  id: string;
+  name: string;
+}
+
 export interface ShareLink {
   id: string;
+  foreman_id: string;
   week_start: string;
   week_end: string;
   created_at: string;

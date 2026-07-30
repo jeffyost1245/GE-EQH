@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import AppShell from "@/components/AppShell";
+import CrewBar from "@/components/CrewBar";
 import WeeklySheets from "@/components/WeeklySheets";
 import { entriesForWeek } from "@/lib/data";
 import { currentWeekRange, formatDate, formatHours } from "@/lib/week";
@@ -60,6 +61,7 @@ export default function Dashboard() {
 
   return (
     <AppShell title="This Week">
+      <CrewBar />
       <p className="muted small" style={{ marginTop: -10 }}>
         {formatDate(week.start)} – {formatDate(week.end)}
       </p>
