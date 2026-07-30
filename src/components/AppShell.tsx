@@ -1,3 +1,4 @@
+import CrewGuard from "./CrewGuard";
 import Nav from "./Nav";
 import SyncStatus from "./SyncStatus";
 
@@ -10,6 +11,7 @@ export default function AppShell({
 }) {
   return (
     <div className="shell">
+      <CrewGuard />
       <SyncStatus />
       <h1>{title}</h1>
       {children}

@@ -18,15 +18,28 @@ export function currentCrew(): CurrentCrew | null {
     .split("; ")
     .find((c) => c.startsWith(`${CREW_COOKIE}=`));
   if (!match) return null;
-  try {
-    const parsed = JSON.parse(
-      decodeURIComponent(match.slice(CREW_COOKIE.length + 1))
-    );
-    if (typeof parsed?.id === "string") {
-      return { id: parsed.id, name: parsed.name ?? "" };
+
+  // Decode repeatedly: an earlier release wrote this cookie double-encoded,
+  // and phones still carrying one should keep working rather than being
+  // silently treated as signed out.
+  let value = match.slice(CREW_COOKIE.length + 1);
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const parsed = JSON.parse(value);
+      if (typeof parsed?.id === "string") {
+        return { id: parsed.id, name: parsed.name ?? "" };
+      }
+      return null;
+    } catch {
+      let decoded: string;
+      try {
+        decoded = decodeURIComponent(value);
+      } catch {
+        return null;
+      }
+      if (decoded === value) return null; // nothing left to unwrap
+      value = decoded;
     }
-  } catch {
-    // Malformed cookie: treat as signed out rather than guessing.
   }
   return null;
 }

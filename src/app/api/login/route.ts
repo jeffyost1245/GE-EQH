@@ -57,16 +57,16 @@ export async function POST(req: NextRequest) {
   });
   // Not a credential — just tells the pages whose data to load. The
   // httpOnly cookie above is what actually grants access.
-  res.cookies.set(
-    CREW_COOKIE,
-    encodeURIComponent(JSON.stringify({ id: foremanId, name })),
-    {
-      httpOnly: false,
-      sameSite: "lax",
-      secure,
-      maxAge: 60 * 60 * 24 * 90,
-      path: "/",
-    }
-  );
+  //
+  // Passed as plain JSON: the cookie writer percent-encodes values on the
+  // way out, so encoding it here too would leave it double-encoded and
+  // unreadable by the browser.
+  res.cookies.set(CREW_COOKIE, JSON.stringify({ id: foremanId, name }), {
+    httpOnly: false,
+    sameSite: "lax",
+    secure,
+    maxAge: 60 * 60 * 24 * 90,
+    path: "/",
+  });
   return res;
 }
