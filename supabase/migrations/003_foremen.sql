@@ -47,7 +47,11 @@ create or replace function verify_foreman_password(
 returns boolean
 language plpgsql
 security definer
-set search_path = public
+-- pgcrypto lives in the "extensions" schema on Supabase; a function pinned
+-- to public alone cannot see crypt(), and every password check fails at
+-- runtime. The call below is schema-qualified as well, so resolution never
+-- depends on the caller's search_path.
+set search_path = public, extensions
 as $$
 declare
   stored text;
@@ -66,7 +70,7 @@ begin
     return false;
   end if;
 
-  return stored = crypt(p_password, stored);
+  return stored = extensions.crypt(p_password, stored);
 end;
 $$;
 
