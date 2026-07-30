@@ -5,6 +5,7 @@ import {
   EntryWithNames,
   Machine,
   NewEntry,
+  ShareLink,
 } from "./types";
 import { dequeue, enqueue, newLocalId, pendingOps } from "./queue";
 
@@ -268,4 +269,56 @@ export async function entriesForWeek(
     .lte("date", end);
   if (error) throw error;
   return data as EntryWithNames[];
+}
+
+// ---------- checkout sheet sharing ----------
+
+/**
+ * Attach (or clear) a checkout sheet photo on an existing entry. Kept
+ * separate from saveEntryUpdate so a photo added right after saving
+ * doesn't have to resend the whole entry.
+ */
+export async function setEntryPhoto(
+  id: string,
+  photoPath: string | null
+): Promise<void> {
+  const { error } = await getSupabase()
+    .from("entries")
+    .update({ photo_path: photoPath, updated_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+/**
+ * Mint a link that shows one week's checkout sheets without the crew
+ * password, for forwarding to the safety officer.
+ */
+export async function createShareLink(
+  weekStart: string,
+  weekEnd: string,
+  days = 30
+): Promise<ShareLink> {
+  const expires = new Date();
+  expires.setDate(expires.getDate() + days);
+  const { data, error } = await getSupabase()
+    .from("share_links")
+    .insert({
+      week_start: weekStart,
+      week_end: weekEnd,
+      expires_at: expires.toISOString(),
+    })
+    .select()
+    .limit(1);
+  if (error) throw error;
+  return data![0] as ShareLink;
+}
+
+export async function getShareLink(token: string): Promise<ShareLink | null> {
+  const { data, error } = await getSupabase()
+    .from("share_links")
+    .select("*")
+    .eq("id", token)
+    .limit(1);
+  if (error) throw error;
+  return (data?.[0] as ShareLink) ?? null;
 }

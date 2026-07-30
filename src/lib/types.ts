@@ -24,8 +24,18 @@ export interface Entry {
   end_hours_autofilled: boolean;
   note: string | null;
   job_tag: string | null;
+  /** Storage path of the checkout sheet photo, if one was attached. */
+  photo_path: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface ShareLink {
+  id: string;
+  week_start: string;
+  week_end: string;
+  created_at: string;
+  expires_at: string;
 }
 
 export interface EntryWithNames extends Entry {
@@ -41,4 +51,5 @@ export interface NewEntry {
   end_hours: number | null;
   note: string | null;
   job_tag: string | null;
+  photo_path?: string | null;
 }

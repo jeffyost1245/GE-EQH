@@ -360,6 +360,114 @@ button {
   flex-wrap: wrap;
 }
 
+/* ---------- checkout sheets ---------- */
+
+.sheet-preview {
+  display: block;
+  width: 100%;
+  max-height: 320px;
+  object-fit: contain;
+  background: #eef0f4;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  margin-top: 6px;
+}
+
+.sheet-full {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  margin-top: 10px;
+}
+
+.sheets {
+  margin-top: 24px;
+}
+
+.sheets > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 700;
+  padding: 14px 4px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.sheets > summary::-webkit-details-marker {
+  display: none;
+}
+
+.sheets > summary::after {
+  content: "▾";
+  margin-left: auto;
+  color: var(--muted);
+}
+
+.sheets[open] > summary::after {
+  content: "▴";
+}
+
+.sheets-count {
+  background: var(--accent);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 800;
+  min-width: 22px;
+  text-align: center;
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+
+.sheet-day h3 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--muted);
+  margin: 12px 0 8px;
+}
+
+.sheet-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px;
+}
+
+.sheet-thumb {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  background: #eef0f4;
+}
+
+.sheet-thumb img {
+  display: block;
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+}
+
+.sheet-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 120px;
+  color: var(--muted);
+}
+
+.sheet-caption {
+  display: block;
+  background: #fff;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.35;
+  padding: 6px 8px;
+}
+
 .admin-bar {
   display: flex;
   align-items: center;

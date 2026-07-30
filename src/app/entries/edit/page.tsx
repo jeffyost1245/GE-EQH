@@ -8,7 +8,14 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import AppShell from "@/components/AppShell";
-import { getEntry, listCrew, listMachines, saveEntryUpdate } from "@/lib/data";
+import SheetPhotoField from "@/components/SheetPhotoField";
+import {
+  getEntry,
+  listCrew,
+  listMachines,
+  saveEntryUpdate,
+  setEntryPhoto,
+} from "@/lib/data";
 import { CrewMember, EntryWithNames, Machine } from "@/lib/types";
 
 function EditEntry() {
@@ -28,6 +35,7 @@ function EditEntry() {
   const [endHours, setEndHours] = useState("");
   const [note, setNote] = useState("");
   const [jobTag, setJobTag] = useState("");
+  const [photoPath, setPhotoPath] = useState<string | null>(null);
 
   const [busy, setBusy] = useState(false);
   const [saveError, setSaveError] = useState("");
@@ -60,6 +68,7 @@ function EditEntry() {
         setEndHours(e.end_hours != null ? String(e.end_hours) : "");
         setNote(e.note ?? "");
         setJobTag(e.job_tag ?? "");
+        setPhotoPath(e.photo_path ?? null);
       } catch {
         setLoadError("Can't load this entry — no signal.");
       }
@@ -88,6 +97,7 @@ function EditEntry() {
       end_hours: end,
       note: note.trim() || null,
       job_tag: jobTag.trim() || null,
+      photo_path: photoPath,
     });
     setBusy(false);
     if (result === "synced") {
@@ -184,6 +194,16 @@ function EditEntry() {
             id="note"
             value={note}
             onChange={(e) => setNote(e.target.value)}
+          />
+
+          <SheetPhotoField
+            value={photoPath}
+            onChange={(path) => {
+              setPhotoPath(path);
+              // Persist right away so a photo added here isn't lost if the
+              // form is closed without saving; Save Changes also sends it.
+              void setEntryPhoto(id, path).catch(() => {});
+            }}
           />
 
           {saveError && <p className="error">{saveError}</p>}

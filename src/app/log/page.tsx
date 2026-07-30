@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import AppShell from "@/components/AppShell";
+import SheetPhotoField from "@/components/SheetPhotoField";
 import { latestEntryForMachine, listCrew, listMachines, saveEntry } from "@/lib/data";
 import { cacheGet, cacheSet } from "@/lib/cache";
 import { formatDate, formatHours, todayString } from "@/lib/week";
@@ -26,6 +27,7 @@ export default function LogPage() {
   const [endHours, setEndHours] = useState("");
   const [note, setNote] = useState("");
   const [jobTag, setJobTag] = useState("");
+  const [photoPath, setPhotoPath] = useState<string | null>(null);
 
   const [prevEntry, setPrevEntry] = useState<Entry | null>(null);
   const [prevFromCache, setPrevFromCache] = useState(false);
@@ -112,6 +114,7 @@ export default function LogPage() {
       end_hours: end,
       note: note.trim() || null,
       job_tag: jobTag.trim() || null,
+      photo_path: photoPath,
     });
     setBusy(false);
     setSaved(result);
@@ -121,6 +124,7 @@ export default function LogPage() {
     setEndHours("");
     setNote("");
     setJobTag("");
+    setPhotoPath(null);
     setPrevEntry(null);
     setPrevFromCache(false);
   }
@@ -232,6 +236,9 @@ export default function LogPage() {
           placeholder="What was it used for?"
         />
 
+        <SheetPhotoField value={photoPath} onChange={setPhotoPath} />
+
+        {saveError && <p className="error">{saveError}</p>}
         <button className="btn" disabled={busy}>
           {busy ? "Saving…" : "Save Entry"}
         </button>

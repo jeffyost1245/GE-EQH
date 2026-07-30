@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import AppShell from "@/components/AppShell";
+import WeeklySheets from "@/components/WeeklySheets";
 import { entriesForWeek } from "@/lib/data";
 import { currentWeekRange, formatDate, formatHours } from "@/lib/week";
 import { EntryWithNames } from "@/lib/types";
@@ -118,6 +119,13 @@ export default function Dashboard() {
             ))}
           </div>
         </>
+      )}
+      {entries && (
+        <WeeklySheets
+          entries={entries}
+          weekStart={week.start}
+          weekEnd={week.end}
+        />
       )}
     </AppShell>
   );
