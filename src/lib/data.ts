@@ -137,6 +137,19 @@ export async function latestEntryForMachine(
 }
 
 /**
+ * Drop photo_path when there's no photo. Without this, every write would
+ * name the column, so entries would fail to save against a database that
+ * hasn't had the checkout-sheet migration applied yet.
+ */
+function withoutEmptyPhoto<T extends { photo_path?: string | null }>(
+  payload: T
+): T {
+  if (payload.photo_path) return payload;
+  const { photo_path: _omit, ...rest } = payload;
+  return rest as T;
+}
+
+/**
  * Create an entry. If the machine's most recent existing entry was left
  * open (null end_hours), backfill that older entry's end_hours with this
  * entry's start_hours and mark it auto-filled.
@@ -145,7 +158,7 @@ export async function createEntryOnline(entry: NewEntry): Promise<void> {
   const supabase = getSupabase();
   const prev = await latestEntryForMachine(entry.machine_id);
 
-  const { error } = await supabase.from("entries").insert(entry);
+  const { error } = await supabase.from("entries").insert(withoutEmptyPhoto(entry));
   if (error) throw error;
 
   if (prev && prev.end_hours === null) {
@@ -168,7 +181,10 @@ export async function updateEntryOnline(
 ): Promise<void> {
   const { error } = await getSupabase()
     .from("entries")
-    .update({ ...patch, updated_at: new Date().toISOString() })
+    .update({
+      ...withoutEmptyPhoto(patch),
+      updated_at: new Date().toISOString(),
+    })
     .eq("id", id);
   if (error) throw error;
 }
