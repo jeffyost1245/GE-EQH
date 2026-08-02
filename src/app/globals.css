@@ -360,6 +360,112 @@ button {
   flex-wrap: wrap;
 }
 
+/* ---------- week navigation ---------- */
+
+.week-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px;
+}
+
+.week-nav button {
+  flex: 0 0 auto;
+  width: 48px;
+  height: 48px;
+  font-size: 26px;
+  line-height: 1;
+  font-weight: 700;
+  color: var(--accent);
+  background: #fff;
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+}
+
+.week-nav button:disabled {
+  opacity: 0.3;
+}
+
+.week-nav-label {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.25;
+}
+
+.week-nav-label span:first-child {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.week-total {
+  font-size: 22px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- machine groups per day ---------- */
+
+.machine-day {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+
+.machine-day-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.machine-day-name {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.machine-day-hours {
+  font-size: 22px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.stint {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 7px 0 0;
+  font-size: 15.5px;
+}
+
+.stint-who {
+  flex: 0 0 auto;
+  font-weight: 600;
+  min-width: 84px;
+}
+
+.stint-hours {
+  flex: 0 0 auto;
+  min-width: 46px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.stint-job {
+  flex: 1;
+  color: var(--muted);
+  font-size: 14.5px;
+  overflow-wrap: anywhere;
+}
+
 .crew-bar {
   display: flex;
   align-items: center;
