@@ -28,6 +28,9 @@ interface MachineDay {
   machine: string;
   hours: number;
   open: number;
+  /** Hour meter at the first start and the last finish of the day. */
+  meterStart: number | null;
+  meterEnd: number | null;
   stints: Stint[];
 }
 
@@ -43,12 +46,27 @@ function groupByDayAndMachine(
       machine: e.machines?.name ?? "Unknown machine",
       hours: 0,
       open: 0,
+      meterStart: null,
+      meterEnd: null,
       stints: [],
     };
 
     const worked = e.end_hours != null ? e.end_hours - e.start_hours : null;
     if (worked != null) group.hours += worked;
     else group.open += 1;
+
+    // Lowest start and highest finish across the day, so handing a machine
+    // between operators still reads as one continuous run.
+    group.meterStart =
+      group.meterStart == null
+        ? e.start_hours
+        : Math.min(group.meterStart, e.start_hours);
+    if (e.end_hours != null) {
+      group.meterEnd =
+        group.meterEnd == null
+          ? e.end_hours
+          : Math.max(group.meterEnd, e.end_hours);
+    }
 
     group.stints.push({
       id: e.id,
@@ -181,7 +199,15 @@ export default function Dashboard() {
           {machines.map((m) => (
             <div className="machine-day" key={m.machineId}>
               <div className="machine-day-top">
-                <span className="machine-day-name">{m.machine}</span>
+                <div>
+                  <div className="machine-day-name">{m.machine}</div>
+                  {m.meterStart != null && (
+                    <div className="machine-day-meter">
+                      {formatHours(m.meterStart)} →{" "}
+                      {m.meterEnd != null ? formatHours(m.meterEnd) : "—"}
+                    </div>
+                  )}
+                </div>
                 <span className="machine-day-hours">
                   {formatHours(m.hours)}
                   <span className="stat-unit">hrs</span>

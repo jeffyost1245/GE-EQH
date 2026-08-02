@@ -430,6 +430,14 @@ button {
   font-weight: 700;
 }
 
+.machine-day-meter {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+}
+
 .machine-day-hours {
   font-size: 22px;
   font-weight: 800;
