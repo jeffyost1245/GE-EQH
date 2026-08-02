@@ -59,8 +59,20 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="shell" style={{ paddingTop: "12vh" }}>
-      <h1 style={{ textAlign: "center" }}>🚜 Machine Hours</h1>
+    <div className="shell">
+      <div className="login-brand">
+        <div className="login-contact">Lincoln, Nebraska</div>
+        <div className="login-mark">
+          <span className="brand-mark">GE</span>
+        </div>
+        <div className="brand-rule" style={{ margin: 0 }} />
+      </div>
+
+      <p className="login-tagline">General Excavating</p>
+      <h2 className="split-heading" style={{ border: "none", padding: 0 }}>
+        <em>Machine</em> Hours
+      </h2>
+
       <form onSubmit={submit} className="card">
         <label htmlFor="foreman">Foreman</label>
         <select

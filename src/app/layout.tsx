@@ -2,8 +2,8 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Machine Hours",
-  description: "Equipment hours log",
+  title: "GE Machine Hours",
+  description: "General Excavating equipment hours log",
   manifest: "/manifest.webmanifest",
   icons: {
     icon: [
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Machine Hours",
+    title: "GE Machine Hours",
   },
 };
 
@@ -23,7 +23,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
-  themeColor: "#1d6ef5",
+  themeColor: "#d81e3f",
 };
 
 export default function RootLayout({
