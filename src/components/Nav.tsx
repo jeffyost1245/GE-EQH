@@ -2,28 +2,35 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import {
+  CrewIcon,
+  DashboardIcon,
+  EntriesIcon,
+  LogIcon,
+  MachinesIcon,
+} from "./NavIcons";
 
 const TABS = [
-  { href: "/", icon: "📊", label: "Dashboard" },
-  { href: "/log", icon: "➕", label: "Log Hours" },
-  { href: "/entries", icon: "📋", label: "Entries" },
-  { href: "/machines", icon: "🚜", label: "Machines" },
-  { href: "/crew", icon: "👷", label: "Crew" },
+  { href: "/", Icon: DashboardIcon, label: "Dashboard" },
+  { href: "/log", Icon: LogIcon, label: "Log Hours" },
+  { href: "/entries", Icon: EntriesIcon, label: "Entries" },
+  { href: "/machines", Icon: MachinesIcon, label: "Machines" },
+  { href: "/crew", Icon: CrewIcon, label: "Crew" },
 ];
 
 export default function Nav() {
   const pathname = usePathname();
   return (
     <nav className="nav">
-      {TABS.map((t) => {
+      {TABS.map(({ href, Icon, label }) => {
         const active =
-          t.href === "/" ? pathname === "/" : pathname.startsWith(t.href);
+          href === "/" ? pathname === "/" : pathname.startsWith(href);
         return (
-          <Link key={t.href} href={t.href} className={active ? "active" : ""}>
-            <span className="nav-icon" aria-hidden>
-              {t.icon}
+          <Link key={href} href={href} className={active ? "active" : ""}>
+            <span className="nav-icon">
+              <Icon />
             </span>
-            {t.label}
+            {label}
           </Link>
         );
       })}
