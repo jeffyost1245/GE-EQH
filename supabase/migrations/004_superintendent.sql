@@ -11,7 +11,11 @@ alter table foremen add column if not exists role text not null default 'foreman
   check (role in ('foreman', 'superintendent'));
 
 -- The login dropdown needs the role so the app knows where to send them.
-create or replace function list_foremen()
+-- Postgres refuses to replace a function whose return type changed, so the
+-- old one is dropped rather than replaced.
+drop function if exists list_foremen();
+
+create function list_foremen()
 returns table (id uuid, name text, role text)
 language sql
 security definer
