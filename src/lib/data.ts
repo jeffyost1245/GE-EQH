@@ -14,6 +14,10 @@ import { requireCrewId } from "./tenant";
 const ENTRY_COLUMNS =
   "*, machines(name), crew(name)";
 
+/** Cross-crew reads also carry the crew name, for labelling. */
+const ENTRY_COLUMNS_WITH_CREW =
+  "*, machines(name), crew(name), foremen(name)";
+
 // ---------- foremen ----------
 
 /**
@@ -183,12 +187,19 @@ export async function latestEntryForMachine(
  * name the column, so entries would fail to save against a database that
  * hasn't had the checkout-sheet migration applied yet.
  */
-function withoutEmptyPhoto<T extends { photo_path?: string | null }>(
-  payload: T
-): T {
-  if (payload.photo_path) return payload;
-  const { photo_path: _omit, ...rest } = payload;
-  return rest as T;
+function withoutEmptyPhoto<
+  T extends { photo_path?: string | null; needs_repair?: boolean },
+>(payload: T): T {
+  let out = payload;
+  if (!out.photo_path) {
+    const { photo_path: _omitPhoto, ...rest } = out;
+    out = rest as T;
+  }
+  if (!out.needs_repair) {
+    const { needs_repair: _omitRepair, ...rest } = out;
+    out = rest as T;
+  }
+  return out;
 }
 
 /**
@@ -390,4 +401,123 @@ export async function getShareLink(token: string): Promise<ShareLink | null> {
     .limit(1);
   if (error) throw error;
   return (data?.[0] as ShareLink) ?? null;
+}
+
+
+// ---------- maintenance (superintendent) ----------
+
+/**
+ * Repairs flagged across every crew. Deliberately unscoped: the
+ * superintendent oversees all of them, and the middleware is what keeps
+ * foremen off this path.
+ */
+export async function allRepairs(
+  done: boolean,
+  limit = 200
+): Promise<EntryWithNames[]> {
+  const { data, error } = await getSupabase()
+    .from("entries")
+    .select(ENTRY_COLUMNS_WITH_CREW)
+    .eq("needs_repair", true)
+    .eq("repair_done", done)
+    .order("date", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data as EntryWithNames[];
+}
+
+/**
+ * Entries whose note reads like a repair but was never flagged. Offered
+ * as suggestions only — the wording is a guess, so nothing is treated as
+ * a real item until someone confirms it.
+ */
+export async function repairSuggestions(
+  limit = 300
+): Promise<EntryWithNames[]> {
+  const { data, error } = await getSupabase()
+    .from("entries")
+    .select(ENTRY_COLUMNS_WITH_CREW)
+    .eq("needs_repair", false)
+    .not("note", "is", null)
+    .order("date", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data as EntryWithNames[]).filter((e) => looksLikeRepair(e.note));
+}
+
+/** Words crews actually use when something is wrong with a machine. */
+const REPAIR_WORDS =
+  /\b(leak|leaking|broke|broken|crack|cracked|repair|fix|fixed|replace|blown|blew|flat|overheat|smok|grind|noise|alarm|warning light|hydraulic|won'?t start|wont start|needs?\s|service|loose|worn|bent|damage)/i;
+
+export function looksLikeRepair(note: string | null): boolean {
+  return note != null && REPAIR_WORDS.test(note);
+}
+
+/** Promote a suggestion into a tracked repair. */
+export async function flagRepair(entryId: string): Promise<void> {
+  const { error } = await getSupabase()
+    .from("entries")
+    .update({
+      needs_repair: true,
+      repair_done: false,
+      repair_updated_at: new Date().toISOString(),
+    })
+    .eq("id", entryId);
+  if (error) throw error;
+}
+
+/** Close a repair, or reopen one that came back. */
+export async function setRepairDone(
+  entryId: string,
+  done: boolean,
+  note?: string | null
+): Promise<void> {
+  const patch: Record<string, unknown> = {
+    repair_done: done,
+    repair_updated_at: new Date().toISOString(),
+  };
+  if (note !== undefined) patch.repair_note = note;
+  const { error } = await getSupabase()
+    .from("entries")
+    .update(patch)
+    .eq("id", entryId);
+  if (error) throw error;
+}
+
+/** Every crew's machines, for the overview. */
+export async function allMachines(): Promise<
+  (Machine & { foremen?: { name: string } | null })[]
+> {
+  const { data, error } = await getSupabase()
+    .from("machines")
+    .select("*, foremen(name)")
+    .order("name");
+  if (error) throw error;
+  return data as (Machine & { foremen?: { name: string } | null })[];
+}
+
+/** Every crew's entries for a week, for the overview. */
+export async function allEntriesForWeek(
+  start: string,
+  end: string
+): Promise<EntryWithNames[]> {
+  const { data, error } = await getSupabase()
+    .from("entries")
+    .select(ENTRY_COLUMNS_WITH_CREW)
+    .gte("date", start)
+    .lte("date", end);
+  if (error) throw error;
+  return data as EntryWithNames[];
+}
+
+/** Recent checkout sheets across every crew. */
+export async function allSheets(limit = 60): Promise<EntryWithNames[]> {
+  const { data, error } = await getSupabase()
+    .from("entries")
+    .select(ENTRY_COLUMNS_WITH_CREW)
+    .not("photo_path", "is", null)
+    .order("date", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data as EntryWithNames[];
 }

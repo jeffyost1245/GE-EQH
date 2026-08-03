@@ -36,6 +36,7 @@ function EditEntry() {
   const [note, setNote] = useState("");
   const [jobTag, setJobTag] = useState("");
   const [photoPath, setPhotoPath] = useState<string | null>(null);
+  const [needsRepair, setNeedsRepair] = useState(false);
 
   const [busy, setBusy] = useState(false);
   const [saveError, setSaveError] = useState("");
@@ -69,6 +70,7 @@ function EditEntry() {
         setNote(e.note ?? "");
         setJobTag(e.job_tag ?? "");
         setPhotoPath(e.photo_path ?? null);
+        setNeedsRepair(e.needs_repair ?? false);
       } catch {
         setLoadError("Can't load this entry — no signal.");
       }
@@ -98,6 +100,7 @@ function EditEntry() {
       note: note.trim() || null,
       job_tag: jobTag.trim() || null,
       photo_path: photoPath,
+      needs_repair: needsRepair,
     });
     setBusy(false);
     if (result === "synced") {
@@ -205,6 +208,18 @@ function EditEntry() {
               void setEntryPhoto(id, path).catch(() => {});
             }}
           />
+
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={needsRepair}
+              onChange={(e) => setNeedsRepair(e.target.checked)}
+            />
+            <span>
+              Needs repair
+              <span className="muted small"> — puts it on the shop list</span>
+            </span>
+          </label>
 
           {saveError && <p className="error">{saveError}</p>}
           <button className="btn" disabled={busy}>
