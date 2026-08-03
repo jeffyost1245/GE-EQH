@@ -46,9 +46,18 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const res = NextResponse.json({ ok: true });
+  // Establish the role from the database rather than trusting the
+  // request: it decides what the middleware lets through.
+  const { data: roster } = await getSupabase().rpc("list_foremen");
+  const record = (roster ?? []).find(
+    (f: { id: string }) => f.id === foremanId
+  ) as { role?: string } | undefined;
+  const role =
+    record?.role === "superintendent" ? "superintendent" : "foreman";
+
+  const res = NextResponse.json({ ok: true, role });
   const secure = process.env.NODE_ENV === "production";
-  res.cookies.set(SESSION_COOKIE, await makeSessionCookie(foremanId), {
+  res.cookies.set(SESSION_COOKIE, await makeSessionCookie(foremanId, role), {
     httpOnly: true,
     sameSite: "lax",
     secure,
@@ -61,7 +70,7 @@ export async function POST(req: NextRequest) {
   // Passed as plain JSON: the cookie writer percent-encodes values on the
   // way out, so encoding it here too would leave it double-encoded and
   // unreadable by the browser.
-  res.cookies.set(CREW_COOKIE, JSON.stringify({ id: foremanId, name }), {
+  res.cookies.set(CREW_COOKIE, JSON.stringify({ id: foremanId, name, role }), {
     httpOnly: false,
     sameSite: "lax",
     secure,

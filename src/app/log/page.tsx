@@ -28,6 +28,7 @@ export default function LogPage() {
   const [note, setNote] = useState("");
   const [jobTag, setJobTag] = useState("");
   const [photoPath, setPhotoPath] = useState<string | null>(null);
+  const [needsRepair, setNeedsRepair] = useState(false);
 
   const [prevEntry, setPrevEntry] = useState<Entry | null>(null);
   const [prevFromCache, setPrevFromCache] = useState(false);
@@ -115,6 +116,7 @@ export default function LogPage() {
       note: note.trim() || null,
       job_tag: jobTag.trim() || null,
       photo_path: photoPath,
+      needs_repair: needsRepair,
     });
     setBusy(false);
     setSaved(result);
@@ -125,6 +127,7 @@ export default function LogPage() {
     setNote("");
     setJobTag("");
     setPhotoPath(null);
+    setNeedsRepair(false);
     setPrevEntry(null);
     setPrevFromCache(false);
   }
@@ -237,6 +240,18 @@ export default function LogPage() {
         />
 
         <SheetPhotoField value={photoPath} onChange={setPhotoPath} />
+
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={needsRepair}
+            onChange={(e) => setNeedsRepair(e.target.checked)}
+          />
+          <span>
+            Needs repair
+            <span className="muted small"> — puts it on the shop list</span>
+          </span>
+        </label>
 
         {saveError && <p className="error">{saveError}</p>}
         <button className="btn" disabled={busy}>

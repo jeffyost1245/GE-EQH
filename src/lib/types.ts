@@ -26,13 +26,21 @@ export interface Entry {
   job_tag: string | null;
   /** Storage path of the checkout sheet photo, if one was attached. */
   photo_path: string | null;
+  /** Flagged by the operator as needing a repair. */
+  needs_repair: boolean;
+  repair_done: boolean;
+  repair_note: string | null;
+  repair_updated_at: string | null;
   created_at: string;
   updated_at: string;
 }
 
+export type Role = "foreman" | "superintendent";
+
 export interface Foreman {
   id: string;
   name: string;
+  role: Role;
 }
 
 export interface ShareLink {
@@ -47,6 +55,8 @@ export interface ShareLink {
 export interface EntryWithNames extends Entry {
   machines: { name: string } | null;
   crew: { name: string } | null;
+  /** Present on cross-crew queries so items can be labelled by crew. */
+  foremen?: { name: string } | null;
 }
 
 export interface NewEntry {
@@ -58,4 +68,5 @@ export interface NewEntry {
   note: string | null;
   job_tag: string | null;
   photo_path?: string | null;
+  needs_repair?: boolean;
 }

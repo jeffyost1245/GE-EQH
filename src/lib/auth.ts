@@ -52,8 +52,24 @@ async function sign(value: string, salt: string): Promise<string> {
     .join("");
 }
 
-export async function makeSessionCookie(foremanId: string): Promise<string> {
-  return `${foremanId}.${await sign(foremanId, SESSION_SALT)}`;
+export type SessionRole = "foreman" | "superintendent";
+
+export interface Session {
+  foremanId: string;
+  role: SessionRole;
+}
+
+/**
+ * The role is signed into the cookie alongside the id. It decides what
+ * the middleware allows, so it must not be something the browser can
+ * assert — the readable crew cookie is a display hint only.
+ */
+export async function makeSessionCookie(
+  foremanId: string,
+  role: SessionRole
+): Promise<string> {
+  const payload = `${foremanId}|${role}`;
+  return `${payload}.${await sign(payload, SESSION_SALT)}`;
 }
 
 export async function makeAdminCookie(foremanId: string): Promise<string> {
@@ -83,10 +99,24 @@ async function readCookie(
   return diff === 0 ? foremanId : null;
 }
 
-export function readSessionCookie(
+export async function readSession(
+  value: string | undefined
+): Promise<Session | null> {
+  const payload = await readCookie(value, SESSION_SALT);
+  if (!payload) return null;
+  const [foremanId, role] = payload.split("|");
+  if (!foremanId) return null;
+  return {
+    foremanId,
+    role: role === "superintendent" ? "superintendent" : "foreman",
+  };
+}
+
+/** Just the crew id, for callers that don't care about the role. */
+export async function readSessionCookie(
   value: string | undefined
 ): Promise<string | null> {
-  return readCookie(value, SESSION_SALT);
+  return (await readSession(value))?.foremanId ?? null;
 }
 
 export function readAdminCookie(

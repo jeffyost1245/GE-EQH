@@ -37,11 +37,13 @@ export default function LoginPage() {
     setBusy(true);
     setError("");
     try {
-      const name = foremen.find((f) => f.id === foremanId)?.name ?? "";
+      const picked = foremen.find((f) => f.id === foremanId);
+      const name = picked?.name ?? "";
+      const role = picked?.role ?? "foreman";
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ foremanId, password, name }),
+        body: JSON.stringify({ foremanId, password, name, role }),
       });
       if (res.ok) {
         window.localStorage.setItem(LAST_FOREMAN_KEY, foremanId);
@@ -74,7 +76,7 @@ export default function LoginPage() {
       </h2>
 
       <form onSubmit={submit} className="card">
-        <label htmlFor="foreman">Foreman</label>
+        <label htmlFor="foreman">Who are you?</label>
         <select
           id="foreman"
           value={foremanId}
@@ -82,7 +84,7 @@ export default function LoginPage() {
           disabled={loading}
         >
           <option value="">
-            {loading ? "Loading…" : "Choose your foreman…"}
+            {loading ? "Loading…" : "Choose your name…"}
           </option>
           {foremen.map((f) => (
             <option key={f.id} value={f.id}>

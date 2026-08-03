@@ -724,3 +724,85 @@ button {
   font-style: normal;
   color: var(--ge-red);
 }
+
+
+/* ---------- superintendent screens ---------- */
+
+.tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.tab {
+  flex: 1;
+  min-height: 44px;
+  padding: 8px 6px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--muted);
+  background: #fff;
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+}
+
+.tab.active {
+  color: #fff;
+  background: var(--ge-red);
+  border-color: var(--ge-red);
+}
+
+.repair-callout {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #fff;
+  border: 1.5px solid var(--ge-red);
+  border-left-width: 6px;
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  text-decoration: none;
+  color: inherit;
+  font-weight: 700;
+}
+
+.repair-count {
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--ge-red);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.repair-note {
+  margin: 8px 0 0;
+  font-size: 15.5px;
+  font-style: italic;
+  color: var(--text);
+}
+
+.repair {
+  border-left: 4px solid var(--ge-red);
+}
+
+/* Checkbox rows need a real tap target, not a 13px box. */
+.check {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 18px 0 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.check input[type="checkbox"] {
+  width: 26px;
+  height: 26px;
+  margin: 0;
+  flex: 0 0 auto;
+  accent-color: var(--ge-red);
+}
