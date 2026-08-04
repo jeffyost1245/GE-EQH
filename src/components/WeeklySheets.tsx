@@ -10,7 +10,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { createShareLink, inspectionsForWeek } from "@/lib/data";
+import {
+  createShareLink,
+  deleteInspection,
+  inspectionsForWeek,
+  removeEntryPhoto,
+} from "@/lib/data";
 import { flagBadgeText, flaggedItems } from "@/lib/inspection";
 import { sheetPhotoUrls } from "@/lib/photo";
 import SheetThumbnail from "./SheetThumbnail";
@@ -57,6 +62,11 @@ export default function WeeklySheets({
   const [shareError, setShareError] = useState("");
   const [copied, setCopied] = useState(false);
 
+  const [removing, setRemoving] = useState(false);
+  const [removed, setRemoved] = useState<Set<string>>(new Set());
+  const [busyId, setBusyId] = useState("");
+  const [removeError, setRemoveError] = useState("");
+
   useEffect(() => {
     const paths = withPhotos.map((e) => e.photo_path!).filter(Boolean);
     if (paths.length === 0) return;
@@ -70,8 +80,6 @@ export default function WeeklySheets({
       .catch(() => [] as InspectionWithNames[])
       .then(setFilled);
   }, [weekStart, weekEnd]);
-
-  const total = withPhotos.length + filled.length;
 
   const byDay = useMemo(() => {
     const cards: Card[] = [
@@ -101,10 +109,34 @@ export default function WeeklySheets({
 
     const map = new Map<string, Card[]>();
     for (const card of cards) {
+      if (removed.has(`${card.kind}-${card.id}`)) continue;
       map.set(card.date, [...(map.get(card.date) ?? []), card]);
     }
     return [...map.entries()].sort((a, b) => b[0].localeCompare(a[0]));
-  }, [filled, withPhotos]);
+  }, [filled, withPhotos, removed]);
+
+  const total = byDay.reduce((n, [, cards]) => n + cards.length, 0);
+
+  async function remove(card: Card) {
+    const label =
+      card.kind === "sheet"
+        ? `Delete the checkout sheet for ${card.machine}? This can't be undone.`
+        : `Remove the sheet photo for ${card.machine}? The hours logged that day stay.`;
+    if (!window.confirm(label)) return;
+
+    const key = `${card.kind}-${card.id}`;
+    setBusyId(key);
+    setRemoveError("");
+    try {
+      if (card.kind === "sheet") await deleteInspection(card.id);
+      else await removeEntryPhoto(card.id);
+      setRemoved((prev) => new Set(prev).add(key));
+    } catch {
+      setRemoveError("Couldn't remove it — check your signal and try again.");
+    } finally {
+      setBusyId("");
+    }
+  }
 
   async function share() {
     setSharing(true);
@@ -145,22 +177,34 @@ export default function WeeklySheets({
           </p>
         )}
 
+        {total > 0 && (
+          <div className="sheets-tools">
+            <button
+              type="button"
+              className="linkish"
+              onClick={() => {
+                setRemoving((on) => !on);
+                setRemoveError("");
+              }}
+            >
+              {removing ? "Done" : "Remove sheets"}
+            </button>
+          </div>
+        )}
+        {removeError && <p className="error">{removeError}</p>}
+
         {byDay.map(([date, cards]) => (
           <div key={date} className="sheet-day">
             <h3>{formatDate(date)}</h3>
             <div className="sheet-grid">
-              {cards.map((card) =>
-                card.kind === "sheet" ? (
-                  <Link
-                    key={`s-${card.id}`}
-                    href={`/inspections/view?id=${card.id}`}
-                    className="sheet-thumb"
-                  >
-                    <SheetThumbnail items={card.items} />
-                    <span className="sheet-caption">
-                      {card.machine}
-                      <br />
-                      <span className="muted">{card.who}</span>
+              {cards.map((card) => {
+                const key = `${card.kind}-${card.id}`;
+                const caption = (
+                  <span className="sheet-caption">
+                    {card.machine}
+                    <br />
+                    <span className="muted">{card.who}</span>
+                    {card.kind === "sheet" && (
                       <span
                         className={`badge ${
                           card.needsRepair ? "badge-repair" : "badge-clean"
@@ -168,12 +212,52 @@ export default function WeeklySheets({
                       >
                         {card.label}
                       </span>
-                    </span>
+                    )}
+                  </span>
+                );
+
+                // In remove mode the card stops being a way in: a thumb
+                // aiming for the ✕ must not open the sheet instead.
+                if (removing) {
+                  return (
+                    <div key={key} className="sheet-thumb">
+                      {card.kind === "sheet" ? (
+                        <SheetThumbnail items={card.items} />
+                      ) : (
+                        <PhotoImage card={card} urls={urls} />
+                      )}
+                      {caption}
+                      <button
+                        type="button"
+                        className="btn btn-small btn-danger sheet-remove"
+                        disabled={busyId === key}
+                        onClick={() => void remove(card)}
+                      >
+                        {busyId === key
+                          ? "Removing…"
+                          : card.kind === "sheet"
+                            ? "Delete sheet"
+                            : "Delete photo"}
+                      </button>
+                    </div>
+                  );
+                }
+
+                return card.kind === "sheet" ? (
+                  <Link
+                    key={key}
+                    href={`/inspections/view?id=${card.id}`}
+                    className="sheet-thumb"
+                  >
+                    <SheetThumbnail items={card.items} />
+                    {caption}
                   </Link>
                 ) : (
-                  <PhotoCard key={`p-${card.id}`} card={card} urls={urls} />
-                )
-              )}
+                  <PhotoCard key={key} card={card} urls={urls}>
+                    {caption}
+                  </PhotoCard>
+                );
+              })}
             </div>
           </div>
         ))}
@@ -214,12 +298,30 @@ export default function WeeklySheets({
   );
 }
 
-function PhotoCard({
+function PhotoImage({
   card,
   urls,
 }: {
   card: Extract<Card, { kind: "photo" }>;
   urls: Record<string, string>;
+}) {
+  const url = urls[card.path];
+  return url ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={url} alt={`Sheet for ${card.machine}`} />
+  ) : (
+    <span className="sheet-loading">…</span>
+  );
+}
+
+function PhotoCard({
+  card,
+  urls,
+  children,
+}: {
+  card: Extract<Card, { kind: "photo" }>;
+  urls: Record<string, string>;
+  children: React.ReactNode;
 }) {
   const url = urls[card.path];
   return (
@@ -232,17 +334,8 @@ function PhotoCard({
         if (!url) ev.preventDefault();
       }}
     >
-      {url ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={url} alt={`Sheet for ${card.machine}`} />
-      ) : (
-        <span className="sheet-loading">…</span>
-      )}
-      <span className="sheet-caption">
-        {card.machine}
-        <br />
-        <span className="muted">{card.who}</span>
-      </span>
+      <PhotoImage card={card} urls={urls} />
+      {children}
     </a>
   );
 }

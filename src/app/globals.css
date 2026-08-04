@@ -1035,6 +1035,22 @@ button {
   border-bottom: 1px solid var(--line);
 }
 
+.sheets-tools {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 2px;
+}
+
+/* Sits inside the card, under the caption, so the target that deletes a
+   sheet is never adjacent to the one that opens it. */
+.sheet-remove {
+  display: block;
+  width: calc(100% - 16px);
+  margin: 0 8px 8px;
+  min-height: 40px;
+  font-size: 13px;
+}
+
 /* The same drawing at full card width, where a photographed sheet would
    have shown the whole page. */
 .sheet-mini-full {
