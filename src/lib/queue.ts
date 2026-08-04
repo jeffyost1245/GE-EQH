@@ -3,7 +3,7 @@
 // page reloads; it syncs on app load, on the browser's "online" event,
 // and on a slow interval.
 
-import { NewEntry } from "./types";
+import { NewEntry, NewInspection } from "./types";
 
 export interface PendingCreate {
   kind: "create";
@@ -20,7 +20,19 @@ export interface PendingUpdate {
   queuedAt: string;
 }
 
-export type PendingOp = PendingCreate | PendingUpdate;
+/**
+ * A whole checkout sheet, queued as one unit. It replays as an upsert
+ * keyed on machine and date, so filling one out in a dead zone and again
+ * on the way back to the yard leaves one sheet, not two.
+ */
+export interface PendingInspection {
+  kind: "inspection";
+  localId: string;
+  inspection: NewInspection;
+  queuedAt: string;
+}
+
+export type PendingOp = PendingCreate | PendingUpdate | PendingInspection;
 
 const KEY = "eqh_pending_ops";
 const LISTENERS = new Set<() => void>();

@@ -4,8 +4,11 @@ import {
   Entry,
   EntryWithNames,
   Foreman,
+  Inspection,
+  InspectionWithNames,
   Machine,
   NewEntry,
+  NewInspection,
   ShareLink,
 } from "./types";
 import { dequeue, enqueue, newLocalId, pendingOps } from "./queue";
@@ -298,6 +301,8 @@ export async function syncPending(): Promise<number> {
     try {
       if (op.kind === "create") {
         await createEntryOnline(op.entry);
+      } else if (op.kind === "inspection") {
+        await saveInspectionOnline(op.inspection);
       } else {
         await updateEntryOnline(op.entryId, op.patch);
       }
@@ -404,7 +409,184 @@ export async function getShareLink(token: string): Promise<ShareLink | null> {
 }
 
 
+// ---------- checkout sheets (inspections) ----------
+
+const INSPECTION_COLUMNS = "*, machines(name), crew(name)";
+const INSPECTION_COLUMNS_WITH_CREW = "*, machines(name), crew(name), foremen(name)";
+
+/**
+ * Save a sheet. Upserts on machine and date because the paper works that
+ * way — one checkout per machine per day — so a crew that opens the form
+ * twice corrects the morning's sheet instead of filing a second one.
+ */
+export async function saveInspectionOnline(
+  inspection: NewInspection
+): Promise<Inspection> {
+  const { data, error } = await getSupabase()
+    .from("inspections")
+    .upsert(
+      {
+        ...inspection,
+        foreman_id: requireCrewId(),
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "foreman_id,machine_id,date" }
+    )
+    .select()
+    .limit(1);
+  if (error) throw error;
+  return data![0] as Inspection;
+}
+
+/** Save, falling back to the queue when there's no signal. */
+export async function saveInspection(
+  inspection: NewInspection
+): Promise<{ status: "synced"; saved: Inspection } | { status: "queued" }> {
+  try {
+    return { status: "synced", saved: await saveInspectionOnline(inspection) };
+  } catch {
+    enqueue({
+      kind: "inspection",
+      localId: newLocalId(),
+      inspection,
+      queuedAt: new Date().toISOString(),
+    });
+    return { status: "queued" };
+  }
+}
+
+export async function getInspection(
+  id: string
+): Promise<InspectionWithNames | null> {
+  const { data, error } = await getSupabase()
+    .from("inspections")
+    .select(INSPECTION_COLUMNS)
+    .eq("foreman_id", requireCrewId())
+    .eq("id", id)
+    .limit(1);
+  if (error) throw error;
+  return (data?.[0] as InspectionWithNames) ?? null;
+}
+
+/** Today's sheet for a machine, if one has already been filled out. */
+export async function inspectionForDay(
+  machineId: string,
+  date: string
+): Promise<InspectionWithNames | null> {
+  const { data, error } = await getSupabase()
+    .from("inspections")
+    .select(INSPECTION_COLUMNS)
+    .eq("foreman_id", requireCrewId())
+    .eq("machine_id", machineId)
+    .eq("date", date)
+    .limit(1);
+  if (error) throw error;
+  return (data?.[0] as InspectionWithNames) ?? null;
+}
+
+export async function inspectionsForWeek(
+  start: string,
+  end: string,
+  foremanId?: string
+): Promise<InspectionWithNames[]> {
+  const { data, error } = await getSupabase()
+    .from("inspections")
+    .select(INSPECTION_COLUMNS)
+    .eq("foreman_id", foremanId ?? requireCrewId())
+    .gte("date", start)
+    .lte("date", end)
+    .order("date", { ascending: false });
+  if (error) throw error;
+  return data as InspectionWithNames[];
+}
+
+export async function listInspections(
+  limit = 60
+): Promise<InspectionWithNames[]> {
+  const { data, error } = await getSupabase()
+    .from("inspections")
+    .select(INSPECTION_COLUMNS)
+    .eq("foreman_id", requireCrewId())
+    .order("date", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data as InspectionWithNames[];
+}
+
+/**
+ * Location and job from the crew's most recent sheet that day, so the
+ * second machine of the morning doesn't retype what the first one did.
+ */
+export async function todaysJobFields(
+  date: string
+): Promise<Pick<Inspection, "location" | "shift" | "job_no" | "job_name"> | null> {
+  const { data, error } = await getSupabase()
+    .from("inspections")
+    .select("location, shift, job_no, job_name")
+    .eq("foreman_id", requireCrewId())
+    .eq("date", date)
+    .order("created_at", { ascending: false })
+    .limit(1);
+  if (error) throw error;
+  return (
+    (data?.[0] as Pick<
+      Inspection,
+      "location" | "shift" | "job_no" | "job_name"
+    >) ?? null
+  );
+}
+
 // ---------- maintenance (superintendent) ----------
+
+/** Sheets with an open RR, across every crew. */
+export async function allInspectionRepairs(
+  done: boolean,
+  limit = 200
+): Promise<InspectionWithNames[]> {
+  const { data, error } = await getSupabase()
+    .from("inspections")
+    .select(INSPECTION_COLUMNS_WITH_CREW)
+    .eq("repairs_needed", true)
+    .eq("repair_done", done)
+    .order("date", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data as InspectionWithNames[];
+}
+
+/** Close an inspection's repair, or reopen one that came back. */
+export async function setInspectionRepairDone(
+  id: string,
+  done: boolean,
+  note?: string | null
+): Promise<void> {
+  const patch: Record<string, unknown> = {
+    repair_done: done,
+    repair_updated_at: new Date().toISOString(),
+  };
+  if (note !== undefined) patch.repair_note = note;
+  const { error } = await getSupabase()
+    .from("inspections")
+    .update(patch)
+    .eq("id", id);
+  if (error) throw error;
+}
+
+/** Recent sheets across every crew, for the superintendent. */
+export async function allInspections(
+  limit = 60
+): Promise<InspectionWithNames[]> {
+  const { data, error } = await getSupabase()
+    .from("inspections")
+    .select(INSPECTION_COLUMNS_WITH_CREW)
+    .order("date", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data as InspectionWithNames[];
+}
+
+
 
 /**
  * Repairs flagged across every crew. Deliberately unscoped: the

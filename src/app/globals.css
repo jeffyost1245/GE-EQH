@@ -780,6 +780,8 @@ button {
   font-size: 15.5px;
   font-style: italic;
   color: var(--text);
+  /* A sheet can flag several items; each gets its own line. */
+  white-space: pre-line;
 }
 
 .repair {
@@ -805,4 +807,239 @@ button {
   margin: 0;
   flex: 0 0 auto;
   accent-color: var(--ge-red);
+}
+
+/* ---------- checkout sheet ---------- */
+
+/* One tap clears a whole section that's fine. Sits above its items so
+   it reads as "everything below", not as a reply to the last row. */
+.allok {
+  width: 100%;
+  margin: 0 0 4px;
+}
+
+.insp-item {
+  border-bottom: 1px solid var(--line);
+  padding: 8px 0;
+}
+
+.insp-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.insp-item.flagged {
+  background: var(--amber-bg);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin: 4px -10px;
+  border-bottom-color: transparent;
+}
+
+.insp-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.insp-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.insp-note {
+  margin-top: 8px;
+  min-height: 46px;
+  font-size: 16px;
+}
+
+/* N/A · OK · RR, as one control. Three separate buttons would let a
+   thumb land between them and change nothing. */
+.seg {
+  display: flex;
+  flex: 0 0 auto;
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.seg-btn {
+  min-width: 46px;
+  min-height: 44px;
+  padding: 0 6px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  background: #fff;
+  border: none;
+  border-right: 1px solid var(--line);
+}
+
+.seg-btn:last-child {
+  border-right: none;
+}
+
+.seg-ok.on {
+  color: #fff;
+  background: var(--green);
+}
+
+.seg-na.on {
+  color: #fff;
+  background: #6b7280;
+}
+
+/* Amber, not the brand red: "requires repair" shouldn't read as a
+   button, and hi-vis is the yard's own vocabulary for a hazard. */
+.seg-rr.on {
+  color: #3d2200;
+  background: #f7c948;
+  box-shadow: inset 0 0 0 2px var(--amber);
+}
+
+.insp-tally {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.insp-flagcount {
+  margin-left: auto;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--amber);
+  background: var(--amber-bg);
+}
+
+.insp-verdict {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.insp-flag {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.insp-flag:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.insp-flag-item {
+  font-size: 16.5px;
+  font-weight: 800;
+}
+
+.insp-flag-note {
+  margin: 4px 0 0;
+  font-size: 15px;
+  color: var(--muted);
+}
+
+.insp-recorded {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.insp-recorded:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.tag {
+  flex: 0 0 auto;
+  padding: 3px 9px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.tag-rr {
+  color: var(--amber);
+  background: var(--amber-bg);
+}
+
+.tag-na,
+.tag-none {
+  color: var(--muted);
+  background: #eceef1;
+}
+
+.badge-repair {
+  color: var(--amber);
+  background: var(--amber-bg);
+}
+
+.badge-clean {
+  color: var(--green);
+  background: #e2f2e8;
+}
+
+/* ---------- signature ---------- */
+
+.sigpad {
+  display: block;
+  width: 100%;
+  background: #fff;
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  /* The browser must not treat a signing stroke as a scroll. */
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.sigrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 6px;
+}
+
+.linkish {
+  background: none;
+  border: none;
+  padding: 8px 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ge-red);
+  text-decoration: underline;
+}
+
+/* ---------- sheet entry points ---------- */
+
+.sheet-choice {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.sheet-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  text-decoration: none;
+  color: inherit;
+}
+
+.sheet-line-machine {
+  font-weight: 700;
+}
+
+.sheet-line .badge {
+  margin-left: auto;
 }

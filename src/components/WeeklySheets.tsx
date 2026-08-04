@@ -4,9 +4,11 @@
 // officer can open without the crew password.
 
 import { useEffect, useMemo, useState } from "react";
-import { createShareLink } from "@/lib/data";
+import Link from "next/link";
+import { createShareLink, inspectionsForWeek } from "@/lib/data";
+import { flaggedItems } from "@/lib/inspection";
 import { sheetPhotoUrls } from "@/lib/photo";
-import { EntryWithNames } from "@/lib/types";
+import { EntryWithNames, InspectionWithNames } from "@/lib/types";
 import { formatDate } from "@/lib/week";
 
 export default function WeeklySheets({
@@ -22,6 +24,7 @@ export default function WeeklySheets({
     () => entries.filter((e) => e.photo_path),
     [entries]
   );
+  const [filled, setFilled] = useState<InspectionWithNames[]>([]);
   const [urls, setUrls] = useState<Record<string, string>>({});
   const [shareUrl, setShareUrl] = useState("");
   const [sharing, setSharing] = useState(false);
@@ -33,6 +36,14 @@ export default function WeeklySheets({
     if (paths.length === 0) return;
     sheetPhotoUrls(paths).then(setUrls);
   }, [withPhotos]);
+
+  useEffect(() => {
+    inspectionsForWeek(weekStart, weekEnd)
+      .then(setFilled)
+      // Offline, or the migration hasn't run yet: the photos below still
+      // show, which is the behaviour this screen had before.
+      .catch(() => setFilled([]));
+  }, [weekStart, weekEnd]);
 
   const byDay = useMemo(() => {
     const map = new Map<string, EntryWithNames[]>();
@@ -70,16 +81,41 @@ export default function WeeklySheets({
     <details className="sheets">
       <summary>
         📋 Checkout sheets this week
-        <span className="sheets-count">{withPhotos.length}</span>
+        <span className="sheets-count">{withPhotos.length + filled.length}</span>
       </summary>
 
       <div className="card">
-        {withPhotos.length === 0 && (
+        {withPhotos.length === 0 && filled.length === 0 && (
           <p className="muted small" style={{ margin: 0 }}>
-            No checkout sheets photographed this week yet. Add one when you log
-            hours, or from any entry.
+            No checkout sheets this week yet. Fill one out when you check a
+            machine out, or photograph the paper one.
           </p>
         )}
+
+        {filled.map((sheet) => {
+          const flagged = flaggedItems(sheet.items);
+          return (
+            <Link
+              key={sheet.id}
+              className="sheet-line"
+              href={`/inspections/view?id=${sheet.id}`}
+            >
+              <span className="sheet-line-machine">
+                {sheet.machines?.name ?? "Machine"}
+              </span>
+              <span className="muted small">{formatDate(sheet.date)}</span>
+              <span
+                className={`badge ${
+                  flagged.length > 0 ? "badge-repair" : "badge-clean"
+                }`}
+              >
+                {flagged.length > 0
+                  ? flagged.map((f) => f.item).join(", ")
+                  : "All clear"}
+              </span>
+            </Link>
+          );
+        })}
 
         {byDay.map(([date, items]) => (
           <div key={date} className="sheet-day">
@@ -116,7 +152,7 @@ export default function WeeklySheets({
           </div>
         ))}
 
-        {withPhotos.length > 0 && (
+        {withPhotos.length + filled.length > 0 && (
           <>
             <button
               className="btn btn-secondary"

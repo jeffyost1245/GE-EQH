@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import AppShell from "@/components/AppShell";
 import SheetPhotoField from "@/components/SheetPhotoField";
 import { latestEntryForMachine, listCrew, listMachines, saveEntry } from "@/lib/data";
@@ -238,6 +239,24 @@ export default function LogPage() {
           onChange={(e) => setNote(e.target.value)}
           placeholder="What was it used for?"
         />
+
+        <div className="sheet-choice">
+          <label>Checkout sheet</label>
+          <Link
+            className="btn btn-small btn-secondary"
+            href={
+              machineId
+                ? `/inspect?machine=${machineId}&date=${date}`
+                : "/inspect"
+            }
+          >
+            📋 Fill it out here
+          </Link>
+          <p className="small muted">
+            Or photograph the paper one — either works, and anything marked
+            RR goes on the shop list the same way.
+          </p>
+        </div>
 
         <SheetPhotoField value={photoPath} onChange={setPhotoPath} />
 
