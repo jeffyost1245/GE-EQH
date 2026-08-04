@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import AppShell from "@/components/AppShell";
 import CrewBar from "@/components/CrewBar";
 import SheetPdfButton from "@/components/SheetPdfButton";
+import SheetThumbnail from "@/components/SheetThumbnail";
 import { allInspections, allSheets } from "@/lib/data";
 import { flaggedItems } from "@/lib/inspection";
 import { sheetPhotoUrls } from "@/lib/photo";
@@ -98,6 +99,11 @@ export default function SheetsPage() {
             ) : (
               <div className="badge badge-clean">All clear</div>
             )}
+            <SheetThumbnail
+              items={s.items ?? {}}
+              className="sheet-mini-full"
+              fit="meet"
+            />
             <SheetPdfButton sheet={s} />
           </div>
         );

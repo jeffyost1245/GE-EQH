@@ -2,14 +2,40 @@
 
 // This week's checkout sheets, grouped by day, with a link the safety
 // officer can open without the crew password.
+//
+// Filled-out sheets and photographed ones sit in the same grid on
+// purpose: to a foreman they are the same thing — the sheet for that
+// machine that day — and which way it was captured is not what he's
+// scanning for.
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createShareLink, inspectionsForWeek } from "@/lib/data";
-import { flaggedItems } from "@/lib/inspection";
+import { flagBadgeText, flaggedItems } from "@/lib/inspection";
 import { sheetPhotoUrls } from "@/lib/photo";
-import { EntryWithNames, InspectionWithNames } from "@/lib/types";
+import SheetThumbnail from "./SheetThumbnail";
+import { EntryWithNames, InspectionItems, InspectionWithNames } from "@/lib/types";
 import { formatDate } from "@/lib/week";
+
+type Card =
+  | {
+      kind: "photo";
+      id: string;
+      date: string;
+      machine: string;
+      who: string;
+      path: string;
+    }
+  | {
+      kind: "sheet";
+      id: string;
+      date: string;
+      machine: string;
+      who: string;
+      items: InspectionItems;
+      needsRepair: boolean;
+      label: string;
+    };
 
 export default function WeeklySheets({
   entries,
@@ -39,19 +65,46 @@ export default function WeeklySheets({
 
   useEffect(() => {
     inspectionsForWeek(weekStart, weekEnd)
-      .then(setFilled)
-      // Offline, or the migration hasn't run yet: the photos below still
-      // show, which is the behaviour this screen had before.
-      .catch(() => setFilled([]));
+      // Offline, or the migration hasn't run yet: the photos still show,
+      // which is the behaviour this screen had before.
+      .catch(() => [] as InspectionWithNames[])
+      .then(setFilled);
   }, [weekStart, weekEnd]);
 
+  const total = withPhotos.length + filled.length;
+
   const byDay = useMemo(() => {
-    const map = new Map<string, EntryWithNames[]>();
-    for (const e of withPhotos) {
-      map.set(e.date, [...(map.get(e.date) ?? []), e]);
+    const cards: Card[] = [
+      ...filled.map(
+        (s): Card => ({
+          kind: "sheet",
+          id: s.id,
+          date: s.date,
+          machine: s.machines?.name ?? "Machine",
+          who: s.crew?.name ?? "",
+          items: s.items ?? {},
+          needsRepair: flaggedItems(s.items ?? {}).length > 0,
+          label: flagBadgeText(s.items ?? {}),
+        })
+      ),
+      ...withPhotos.map(
+        (e): Card => ({
+          kind: "photo",
+          id: e.id,
+          date: e.date,
+          machine: e.machines?.name ?? "Unknown",
+          who: e.crew?.name ?? "",
+          path: e.photo_path!,
+        })
+      ),
+    ];
+
+    const map = new Map<string, Card[]>();
+    for (const card of cards) {
+      map.set(card.date, [...(map.get(card.date) ?? []), card]);
     }
     return [...map.entries()].sort((a, b) => b[0].localeCompare(a[0]));
-  }, [withPhotos]);
+  }, [filled, withPhotos]);
 
   async function share() {
     setSharing(true);
@@ -81,78 +134,51 @@ export default function WeeklySheets({
     <details className="sheets">
       <summary>
         📋 Checkout sheets this week
-        <span className="sheets-count">{withPhotos.length + filled.length}</span>
+        <span className="sheets-count">{total}</span>
       </summary>
 
       <div className="card">
-        {withPhotos.length === 0 && filled.length === 0 && (
+        {total === 0 && (
           <p className="muted small" style={{ margin: 0 }}>
             No checkout sheets this week yet. Fill one out when you check a
             machine out, or photograph the paper one.
           </p>
         )}
 
-        {filled.map((sheet) => {
-          const flagged = flaggedItems(sheet.items);
-          return (
-            <Link
-              key={sheet.id}
-              className="sheet-line"
-              href={`/inspections/view?id=${sheet.id}`}
-            >
-              <span className="sheet-line-machine">
-                {sheet.machines?.name ?? "Machine"}
-              </span>
-              <span className="muted small">{formatDate(sheet.date)}</span>
-              <span
-                className={`badge ${
-                  flagged.length > 0 ? "badge-repair" : "badge-clean"
-                }`}
-              >
-                {flagged.length > 0
-                  ? flagged.map((f) => f.item).join(", ")
-                  : "All clear"}
-              </span>
-            </Link>
-          );
-        })}
-
-        {byDay.map(([date, items]) => (
+        {byDay.map(([date, cards]) => (
           <div key={date} className="sheet-day">
             <h3>{formatDate(date)}</h3>
             <div className="sheet-grid">
-              {items.map((e) => {
-                const url = e.photo_path ? urls[e.photo_path] : undefined;
-                return (
-                  <a
-                    key={e.id}
-                    href={url ?? "#"}
-                    target="_blank"
-                    rel="noreferrer"
+              {cards.map((card) =>
+                card.kind === "sheet" ? (
+                  <Link
+                    key={`s-${card.id}`}
+                    href={`/inspections/view?id=${card.id}`}
                     className="sheet-thumb"
-                    onClick={(ev) => {
-                      if (!url) ev.preventDefault();
-                    }}
                   >
-                    {url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={url} alt={`Sheet for ${e.machines?.name}`} />
-                    ) : (
-                      <span className="sheet-loading">…</span>
-                    )}
+                    <SheetThumbnail items={card.items} />
                     <span className="sheet-caption">
-                      {e.machines?.name ?? "Unknown"}
+                      {card.machine}
                       <br />
-                      <span className="muted">{e.crew?.name ?? ""}</span>
+                      <span className="muted">{card.who}</span>
+                      <span
+                        className={`badge ${
+                          card.needsRepair ? "badge-repair" : "badge-clean"
+                        }`}
+                      >
+                        {card.label}
+                      </span>
                     </span>
-                  </a>
-                );
-              })}
+                  </Link>
+                ) : (
+                  <PhotoCard key={`p-${card.id}`} card={card} urls={urls} />
+                )
+              )}
             </div>
           </div>
         ))}
 
-        {withPhotos.length + filled.length > 0 && (
+        {total > 0 && (
           <>
             <button
               className="btn btn-secondary"
@@ -185,5 +211,38 @@ export default function WeeklySheets({
         )}
       </div>
     </details>
+  );
+}
+
+function PhotoCard({
+  card,
+  urls,
+}: {
+  card: Extract<Card, { kind: "photo" }>;
+  urls: Record<string, string>;
+}) {
+  const url = urls[card.path];
+  return (
+    <a
+      href={url ?? "#"}
+      target="_blank"
+      rel="noreferrer"
+      className="sheet-thumb"
+      onClick={(ev) => {
+        if (!url) ev.preventDefault();
+      }}
+    >
+      {url ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={url} alt={`Sheet for ${card.machine}`} />
+      ) : (
+        <span className="sheet-loading">…</span>
+      )}
+      <span className="sheet-caption">
+        {card.machine}
+        <br />
+        <span className="muted">{card.who}</span>
+      </span>
+    </a>
   );
 }

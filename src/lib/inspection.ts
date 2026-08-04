@@ -143,6 +143,18 @@ export function defectSummary(items: InspectionItems): string {
     .join("\n");
 }
 
+/**
+ * Short label for a card's badge. Capped: a sheet with six flags would
+ * otherwise stretch the card taller than the picture above it, and the
+ * count carries the same message as the list.
+ */
+export function flagBadgeText(items: InspectionItems): string {
+  const flagged = flaggedItems(items);
+  if (flagged.length === 0) return "All clear";
+  if (flagged.length <= 2) return flagged.map((f) => f.item).join(", ");
+  return `${flagged[0].item} +${flagged.length - 1} more`;
+}
+
 /** One line for the maintenance list and the entry note. */
 export function flaggedSummaryLine(items: InspectionItems): string {
   const flagged = flaggedItems(items);

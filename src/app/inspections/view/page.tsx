@@ -9,6 +9,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import AppShell from "@/components/AppShell";
 import SheetPdfButton from "@/components/SheetPdfButton";
+import SheetThumbnail from "@/components/SheetThumbnail";
 import { getInspection } from "@/lib/data";
 import { SECTIONS, flaggedItems, itemKey } from "@/lib/inspection";
 import { InspectionWithNames } from "@/lib/types";
@@ -71,6 +72,11 @@ function Record() {
           </div>
         )}
 
+        <SheetThumbnail
+          items={sheet.items ?? {}}
+          className="sheet-mini-full"
+          fit="meet"
+        />
         <SheetPdfButton sheet={sheet} className="btn" />
         {editable && (
           <Link
