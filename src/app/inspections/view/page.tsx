@@ -6,19 +6,43 @@
 
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import AppShell from "@/components/AppShell";
 import SheetPdfButton from "@/components/SheetPdfButton";
 import SheetThumbnail from "@/components/SheetThumbnail";
-import { getInspection } from "@/lib/data";
+import { deleteInspection, getInspection } from "@/lib/data";
 import { SECTIONS, flaggedItems, itemKey } from "@/lib/inspection";
 import { InspectionWithNames } from "@/lib/types";
 import { formatDate, todayString } from "@/lib/week";
 
 function Record() {
   const id = useSearchParams().get("id") ?? "";
+  const router = useRouter();
   const [sheet, setSheet] = useState<InspectionWithNames | null>(null);
   const [error, setError] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+
+  async function removeSheet() {
+    if (!sheet) return;
+    const name = sheet.machines?.name ?? "this machine";
+    if (
+      !window.confirm(
+        `Delete the checkout sheet for ${name}? This can't be undone.`
+      )
+    ) {
+      return;
+    }
+    setDeleting(true);
+    setDeleteError("");
+    try {
+      await deleteInspection(sheet.id);
+      router.push("/inspections");
+    } catch {
+      setDeleteError("Couldn't delete it — check your signal and try again.");
+      setDeleting(false);
+    }
+  }
 
   useEffect(() => {
     (async () => {
@@ -87,6 +111,16 @@ function Record() {
             Fix something on this sheet
           </Link>
         )}
+        <button
+          type="button"
+          className="btn btn-small btn-danger"
+          style={{ marginTop: 10 }}
+          disabled={deleting}
+          onClick={() => void removeSheet()}
+        >
+          {deleting ? "Deleting…" : "Delete this sheet"}
+        </button>
+        {deleteError && <p className="error">{deleteError}</p>}
       </div>
 
       {flagged.length > 0 && (

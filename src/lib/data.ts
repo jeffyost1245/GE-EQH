@@ -11,6 +11,7 @@ import {
   NewInspection,
   ShareLink,
 } from "./types";
+import { deleteSheetPhoto } from "./photo";
 import { dequeue, enqueue, newLocalId, pendingOps } from "./queue";
 import { requireCrewId } from "./tenant";
 
@@ -535,6 +536,49 @@ export async function todaysJobFields(
       "location" | "shift" | "job_no" | "job_name"
     >) ?? null
   );
+}
+
+/**
+ * Remove a checkout sheet. Scoped to the signed-in crew so one crew can
+ * never delete another's, and hard rather than hidden: a sheet filed on
+ * the wrong machine is clutter, and leaving a wrong safety record in
+ * place because it's awkward to remove is worse than removing it.
+ */
+export async function deleteInspection(id: string): Promise<void> {
+  const { error } = await getSupabase()
+    .from("inspections")
+    .delete()
+    .eq("foreman_id", requireCrewId())
+    .eq("id", id);
+  if (error) throw error;
+}
+
+/**
+ * Detach a photographed sheet from its entry and delete the image.
+ *
+ * The hours stay. A photo and the hours it was attached to are two
+ * different records that happen to share a row — nobody asking to
+ * remove a bad photo is asking to lose the day's hours with it.
+ */
+export async function removeEntryPhoto(id: string): Promise<void> {
+  const { data, error } = await getSupabase()
+    .from("entries")
+    .select("photo_path")
+    .eq("foreman_id", requireCrewId())
+    .eq("id", id)
+    .limit(1);
+  if (error) throw error;
+  const path = (data?.[0] as { photo_path: string | null })?.photo_path;
+
+  await setEntryPhoto(id, null);
+  if (path) {
+    try {
+      await deleteSheetPhoto(path);
+    } catch {
+      // The entry no longer points at it; a stray object is harmless,
+      // and failing here would leave the caller thinking nothing worked.
+    }
+  }
 }
 
 // ---------- maintenance (superintendent) ----------
