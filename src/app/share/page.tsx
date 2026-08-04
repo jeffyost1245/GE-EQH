@@ -6,9 +6,11 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { entriesForWeek, getShareLink } from "@/lib/data";
+import SheetPdfButton from "@/components/SheetPdfButton";
+import { entriesForWeek, getShareLink, inspectionsForWeek } from "@/lib/data";
+import { flaggedItems } from "@/lib/inspection";
 import { sheetPhotoUrls } from "@/lib/photo";
-import { EntryWithNames } from "@/lib/types";
+import { EntryWithNames, InspectionWithNames } from "@/lib/types";
 import { formatDate } from "@/lib/week";
 
 type State =
@@ -19,6 +21,7 @@ type State =
       weekStart: string;
       weekEnd: string;
       days: [string, EntryWithNames[]][];
+      filled: InspectionWithNames[];
       urls: Record<string, string>;
     };
 
@@ -47,11 +50,14 @@ function SharedSheets() {
           return;
         }
 
-        const entries = await entriesForWeek(
-          link.week_start,
-          link.week_end,
-          link.foreman_id
-        );
+        const [entries, filled] = await Promise.all([
+          entriesForWeek(link.week_start, link.week_end, link.foreman_id),
+          inspectionsForWeek(
+            link.week_start,
+            link.week_end,
+            link.foreman_id
+          ).catch(() => [] as InspectionWithNames[]),
+        ]);
         const withPhotos = entries.filter((e) => e.photo_path);
         const urls = await sheetPhotoUrls(
           withPhotos.map((e) => e.photo_path!)
@@ -66,6 +72,7 @@ function SharedSheets() {
           weekStart: link.week_start,
           weekEnd: link.week_end,
           days: [...map.entries()].sort((a, b) => a[0].localeCompare(b[0])),
+          filled,
           urls,
         });
       } catch {
@@ -85,7 +92,8 @@ function SharedSheets() {
     return <p className="notice">{state.message}</p>;
   }
 
-  const total = state.days.reduce((n, [, items]) => n + items.length, 0);
+  const photos = state.days.reduce((n, [, items]) => n + items.length, 0);
+  const total = photos + state.filled.length;
 
   return (
     <>
@@ -96,6 +104,38 @@ function SharedSheets() {
 
       {total === 0 && (
         <p className="muted">No checkout sheets were logged this week.</p>
+      )}
+
+      {state.filled.length > 0 && (
+        <>
+          <h2>Inspections</h2>
+          <p className="muted small">
+            Tap Send PDF to save one to your files or print it.
+          </p>
+          {state.filled.map((sheet) => {
+            const flagged = flaggedItems(sheet.items);
+            return (
+              <div className="card" key={sheet.id}>
+                <div className="entry-top">
+                  <span>{sheet.machines?.name ?? "Machine"}</span>
+                  <span className="muted small">{formatDate(sheet.date)}</span>
+                </div>
+                <div className="entry-sub">
+                  {sheet.crew?.name ?? "—"}
+                  {sheet.hour_meter != null && ` · ${sheet.hour_meter} hrs`}
+                </div>
+                {flagged.length > 0 ? (
+                  <div className="badge badge-repair">
+                    {flagged.map((f) => f.item).join(", ")}
+                  </div>
+                ) : (
+                  <div className="badge badge-clean">All clear</div>
+                )}
+                <SheetPdfButton sheet={sheet} />
+              </div>
+            );
+          })}
+        </>
       )}
 
       {state.days.map(([date, items]) => (

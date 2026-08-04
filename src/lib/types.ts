@@ -59,6 +59,75 @@ export interface EntryWithNames extends Entry {
   foremen?: { name: string } | null;
 }
 
+// ---------- checkout sheet (inspection) ----------
+
+/** N/A, OK, or RR (requires repair) — the paper's three columns. */
+export type Mark = "na" | "ok" | "rr";
+
+export interface ItemAnswer {
+  mark: Mark;
+  /** What's wrong. Only meaningful on an RR. */
+  note?: string;
+}
+
+/** Keyed "section/item", e.g. "outside/Hoses". */
+export type InspectionItems = Record<string, ItemAnswer>;
+
+/** A finger-drawn signature, kept as strokes so it can be redrawn sharp. */
+export interface Signature {
+  w: number;
+  h: number;
+  strokes: [number, number][][];
+}
+
+export interface Inspection {
+  id: string;
+  machine_id: string;
+  crew_member_id: string | null;
+  date: string;
+  location: string | null;
+  shift: string | null;
+  job_no: string | null;
+  job_name: string | null;
+  hour_meter: number | null;
+  mileage: string | null;
+  items: InspectionItems;
+  defects: string | null;
+  repairs_needed: boolean;
+  signature: Signature | null;
+  signed_at: string | null;
+  repair_done: boolean;
+  repair_note: string | null;
+  repair_updated_at: string | null;
+  corrected_at: string | null;
+  correction_note: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InspectionWithNames extends Inspection {
+  machines: { name: string } | null;
+  crew: { name: string } | null;
+  foremen?: { name: string } | null;
+}
+
+export interface NewInspection {
+  machine_id: string;
+  crew_member_id: string | null;
+  date: string;
+  location: string | null;
+  shift: string | null;
+  job_no: string | null;
+  job_name: string | null;
+  hour_meter: number | null;
+  mileage: string | null;
+  items: InspectionItems;
+  defects: string | null;
+  repairs_needed: boolean;
+  signature: Signature | null;
+  signed_at: string | null;
+}
+
 export interface NewEntry {
   machine_id: string;
   crew_member_id: string;
