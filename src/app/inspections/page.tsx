@@ -1,14 +1,15 @@
 "use client";
 
-// The crew's checkout sheets, newest first. Flagged machines carry a
-// badge so a foreman can see what came back broken without opening
-// anything.
+// The crew's checkout sheets, newest first and grouped by day, laid out
+// the same way the dashboard shows them: a picture of the sheet you tap
+// to open.
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import AppShell from "@/components/AppShell";
+import SheetThumbnail from "@/components/SheetThumbnail";
 import { listInspections } from "@/lib/data";
-import { countMark, flaggedSummaryLine } from "@/lib/inspection";
+import { flagBadgeText, flaggedItems } from "@/lib/inspection";
 import { InspectionWithNames } from "@/lib/types";
 import { formatDate, todayString } from "@/lib/week";
 
@@ -29,6 +30,14 @@ export default function InspectionsPage() {
     })();
   }, []);
 
+  const byDay = useMemo(() => {
+    const map = new Map<string, InspectionWithNames[]>();
+    for (const sheet of sheets) {
+      map.set(sheet.date, [...(map.get(sheet.date) ?? []), sheet]);
+    }
+    return [...map.entries()].sort((a, b) => b[0].localeCompare(a[0]));
+  }, [sheets]);
+
   const today = todayString();
 
   return (
@@ -46,36 +55,37 @@ export default function InspectionsPage() {
         </p>
       )}
 
-      {sheets.map((sheet) => {
-        const summary = flaggedSummaryLine(sheet.items);
-        return (
-          <Link
-            key={sheet.id}
-            className="card entry-item"
-            href={`/inspections/view?id=${sheet.id}`}
-          >
-            <div className="entry-top">
-              <span>{sheet.machines?.name ?? "Machine"}</span>
-              <span className="muted small">
-                {sheet.date === today ? "Today" : formatDate(sheet.date)}
-              </span>
-            </div>
-            <div className="entry-sub">
-              {sheet.crew?.name ?? "—"}
-              {sheet.hour_meter != null && ` · ${sheet.hour_meter} hrs`}
-              {countMark(sheet.items, "na") > 0 &&
-                ` · ${countMark(sheet.items, "na")} N/A`}
-            </div>
-            {sheet.repairs_needed ? (
-              <div className="badge badge-repair">
-                {summary || "Needs repair"}
-              </div>
-            ) : (
-              <div className="badge badge-clean">All clear</div>
-            )}
-          </Link>
-        );
-      })}
+      {byDay.map(([date, items]) => (
+        <div key={date} className="sheet-day">
+          <h3>{date === today ? "Today" : formatDate(date)}</h3>
+          <div className="sheet-grid">
+            {items.map((sheet) => {
+              const flagged = flaggedItems(sheet.items ?? {});
+              return (
+                <Link
+                  key={sheet.id}
+                  className="sheet-thumb"
+                  href={`/inspections/view?id=${sheet.id}`}
+                >
+                  <SheetThumbnail items={sheet.items ?? {}} />
+                  <span className="sheet-caption">
+                    {sheet.machines?.name ?? "Machine"}
+                    <br />
+                    <span className="muted">{sheet.crew?.name ?? ""}</span>
+                    <span
+                      className={`badge ${
+                        flagged.length > 0 ? "badge-repair" : "badge-clean"
+                      }`}
+                    >
+                      {flagBadgeText(sheet.items ?? {})}
+                    </span>
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      ))}
     </AppShell>
   );
 }

@@ -1025,21 +1025,36 @@ button {
   border-top: 1px solid var(--line);
 }
 
-.sheet-line {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  padding: 10px 0;
+/* The drawn miniature stands in for a photo, so it has to occupy the
+   same footprint as one or the grid goes ragged. */
+.sheet-mini {
+  display: block;
+  width: 100%;
+  height: 120px;
+  background: #fff;
   border-bottom: 1px solid var(--line);
-  text-decoration: none;
-  color: inherit;
 }
 
-.sheet-line-machine {
-  font-weight: 700;
+/* The same drawing at full card width, where a photographed sheet would
+   have shown the whole page. */
+.sheet-mini-full {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 100 / 129;
+  margin-top: 12px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
 }
 
-.sheet-line .badge {
-  margin-left: auto;
+/* Its own line under the name, not trailing the operator. */
+.sheet-caption .badge {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 5px;
+  font-size: 10.5px;
+  padding: 2px 7px;
+  overflow-wrap: anywhere;
 }
