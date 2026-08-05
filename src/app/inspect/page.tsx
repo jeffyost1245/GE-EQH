@@ -44,6 +44,8 @@ function InspectForm() {
   const [crew, setCrew] = useState<CrewMember[]>([]);
   const [loadError, setLoadError] = useState("");
 
+  const fromLog = params.get("from") === "log";
+
   const [machineId, setMachineId] = useState(params.get("machine") ?? "");
   const [crewId, setCrewId] = useState("");
   const [date, setDate] = useState(params.get("date") ?? todayString());
@@ -204,6 +206,12 @@ function InspectForm() {
     });
     setBusy(false);
 
+    // Sent here from Log Hours: go back so the hours can be finished and
+    // saved, rather than stranding a half-typed entry behind this screen.
+    if (fromLog) {
+      router.push("/log?resume=1");
+      return;
+    }
     if (result.status === "synced") {
       router.push(`/inspections/view?id=${result.saved.id}`);
     } else {
@@ -459,7 +467,11 @@ function InspectForm() {
 
         {error && <p className="error">{error}</p>}
         <button className="btn" disabled={busy || !complete}>
-          {busy ? "Saving…" : `Submit ${machineName || "Sheet"}`}
+          {busy
+            ? "Saving…"
+            : fromLog
+              ? "Save sheet & back to hours"
+              : `Submit ${machineName || "Sheet"}`}
         </button>
       </form>
     </AppShell>
