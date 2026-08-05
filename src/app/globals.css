@@ -16,10 +16,68 @@
   --accent: var(--ge-red);
   --accent-dark: var(--ge-red-dark);
   --green: #157a3a;
+  --green-bg: #dcfce7;
+  --on-good: #ffffff;
   --amber: #97530a;
   --amber-bg: #fdf1d3;
   --red: #b3182f;
   --radius: 10px;
+
+  /* What you type into, and the quieter fills behind chips and
+     placeholders. Separate from --card so a field still reads as a field
+     when the card it sits on is dark. */
+  --field: #ffffff;
+  --soft: #f0f1f3;
+  --sunk: #eef0f4;
+
+  /* The masthead sweep and the ink that has to stay legible on it. */
+  --brand-sweep: linear-gradient(90deg, #f4f4f4 0%, #d9d9d9 38%, #3d3d3d 100%);
+  --brand-ink: var(--ge-charcoal);
+
+  --focus-ring: rgba(216, 30, 63, 0.18);
+
+  /* Native controls — the date picker, the select menu, scrollbars —
+     follow this, and they look broken if it disagrees with the page. */
+  color-scheme: light;
+}
+
+/*
+ * Dark mode follows the phone rather than a setting in the app. These
+ * sheets get filled out at 6am in a cab and at noon in open sun, and the
+ * phone already knows which of those it is.
+ *
+ * Two things stay light on purpose: the signature pad and the drawn
+ * miniature of a sheet. Both stand in for paper — a dark signature pad
+ * reads as a disabled box, and an inverted sheet stops looking like the
+ * form it is a picture of.
+ */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14171b;
+    --card: #1e2228;
+    --text: #eef1f4;
+    --muted: #a2abb5;
+    --line: #333a42;
+    --accent: var(--ge-red-bright);
+    --accent-dark: var(--ge-red);
+    --green: #4ec27d;
+    --green-bg: #16331f;
+    --on-good: #08160e;
+    --amber: #f0b429;
+    --amber-bg: #382a09;
+    --red: #ff7286;
+
+    --field: #262b32;
+    --soft: #2c323a;
+    --sunk: #22272e;
+
+    --brand-sweep: linear-gradient(90deg, #2b3037 0%, #23272d 38%, #0c0e11 100%);
+    --brand-ink: #eef1f4;
+
+    --focus-ring: rgba(237, 24, 72, 0.32);
+
+    color-scheme: dark;
+  }
 }
 
 * {
@@ -59,7 +117,7 @@ h2 {
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.07em;
-  color: var(--ge-charcoal);
+  color: var(--text);
   margin: 24px 0 8px;
   padding-bottom: 5px;
   border-bottom: 2px solid var(--ge-red);
@@ -95,7 +153,7 @@ textarea {
   font-size: 18px;
   font-family: inherit;
   color: var(--text);
-  background: #fff;
+  background: var(--field);
   border: 1.5px solid var(--line);
   border-radius: 8px;
   appearance: none;
@@ -114,7 +172,7 @@ input:focus,
 textarea:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(216, 30, 63, 0.18);
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 textarea {
@@ -152,13 +210,13 @@ button {
 }
 
 .btn-secondary {
-  background: #fff;
-  color: var(--ge-charcoal);
-  border: 1.5px solid #c9ced4;
+  background: var(--card);
+  color: var(--text);
+  border: 1.5px solid var(--line);
 }
 
 .btn-danger {
-  background: #fff;
+  background: var(--card);
   color: var(--red);
   border: 1.5px solid var(--red);
 }
@@ -170,7 +228,7 @@ button {
   align-items: center;
   gap: 10px;
   /* The site runs the mark over a light-to-dark gray sweep. */
-  background: linear-gradient(90deg, #f4f4f4 0%, #d9d9d9 38%, #3d3d3d 100%);
+  background: var(--brand-sweep);
   padding: 7px 12px;
   margin: -16px -16px 0;
 }
@@ -189,7 +247,7 @@ button {
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: var(--ge-charcoal);
+  color: var(--brand-ink);
 }
 
 /* The red rule with diagonal hatching that sits under the hero. */
@@ -335,8 +393,8 @@ button {
 }
 
 .badge-auto {
-  background: #f0f1f3;
-  color: var(--ge-charcoal);
+  background: var(--soft);
+  color: var(--text);
 }
 
 .badge-queued {
@@ -357,7 +415,7 @@ button {
 }
 
 .notice-ok {
-  background: #dcfce7;
+  background: var(--green-bg);
   color: var(--green);
 }
 
@@ -437,7 +495,7 @@ button {
   line-height: 1;
   font-weight: 700;
   color: var(--accent);
-  background: #fff;
+  background: var(--card);
   border: 1.5px solid var(--line);
   border-radius: 12px;
 }
@@ -560,7 +618,7 @@ button {
   width: 100%;
   max-height: 320px;
   object-fit: contain;
-  background: #eef0f4;
+  background: var(--sunk);
   border: 1px solid var(--line);
   border-radius: 12px;
   margin-top: 6px;
@@ -634,7 +692,7 @@ button {
   border: 1px solid var(--line);
   border-radius: 10px;
   overflow: hidden;
-  background: #eef0f4;
+  background: var(--sunk);
 }
 
 .sheet-thumb img {
@@ -654,7 +712,7 @@ button {
 
 .sheet-caption {
   display: block;
-  background: #fff;
+  background: var(--card);
   font-size: 12.5px;
   font-weight: 600;
   line-height: 1.35;
@@ -693,7 +751,7 @@ button {
 }
 
 .login-mark {
-  background: linear-gradient(90deg, #f4f4f4 0%, #d9d9d9 38%, #3d3d3d 100%);
+  background: var(--brand-sweep);
   padding: 16px 18px;
 }
 
@@ -741,7 +799,7 @@ button {
   font-size: 13.5px;
   font-weight: 700;
   color: var(--muted);
-  background: #fff;
+  background: var(--card);
   border: 1.5px solid var(--line);
   border-radius: 8px;
 }
@@ -756,7 +814,7 @@ button {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: #fff;
+  background: var(--card);
   border: 1.5px solid var(--ge-red);
   border-left-width: 6px;
   border-radius: var(--radius);
@@ -863,7 +921,7 @@ button {
   border: 1.5px solid var(--line);
   border-radius: 8px;
   overflow: hidden;
-  background: #fff;
+  background: var(--field);
 }
 
 .seg-btn {
@@ -874,7 +932,7 @@ button {
   font-weight: 800;
   letter-spacing: 0.04em;
   color: var(--muted);
-  background: #fff;
+  background: var(--field);
   border: none;
   border-right: 1px solid var(--line);
 }
@@ -884,7 +942,7 @@ button {
 }
 
 .seg-ok.on {
-  color: #fff;
+  color: var(--on-good);
   background: var(--green);
 }
 
@@ -901,14 +959,25 @@ button {
   box-shadow: inset 0 0 0 2px var(--amber);
 }
 
-.insp-tally {
+.insp-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 5;
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-top: 18px;
-  font-size: 14px;
+  /* Spans the shell's padding so it reads as a bar, not a floating chip. */
+  margin: -6px -16px 12px;
+  padding: 10px 16px;
+  background: var(--card);
+  border-bottom: 1px solid var(--line);
+  font-size: 14.5px;
   font-weight: 700;
   color: var(--muted);
+}
+
+.insp-done {
+  color: var(--green);
 }
 
 .insp-flagcount {
@@ -974,7 +1043,7 @@ button {
 .tag-na,
 .tag-none {
   color: var(--muted);
-  background: #eceef1;
+  background: var(--soft);
 }
 
 .badge-repair {
@@ -984,7 +1053,7 @@ button {
 
 .badge-clean {
   color: var(--green);
-  background: #e2f2e8;
+  background: var(--green-bg);
 }
 
 /* ---------- signature ---------- */
@@ -992,6 +1061,7 @@ button {
 .sigpad {
   display: block;
   width: 100%;
+  /* Paper, in both themes: you sign on white. */
   background: #fff;
   border: 1.5px solid var(--line);
   border-radius: 8px;

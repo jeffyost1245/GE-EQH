@@ -229,6 +229,22 @@ function InspectForm() {
       )}
 
       <form onSubmit={submit}>
+        {/* Rides along as you work down the list — the count is only
+            useful while there are still items to answer, which is
+            exactly when it would otherwise be scrolled off the screen. */}
+        <div className="insp-sticky">
+          <span className={complete ? "insp-done" : undefined}>
+            {complete
+              ? `All ${TOTAL_ITEMS} answered`
+              : `${TOTAL_ITEMS - answered} of ${TOTAL_ITEMS} left`}
+          </span>
+          {flagged.length > 0 && (
+            <span className="insp-flagcount">
+              {flagged.length} needs repair
+            </span>
+          )}
+        </div>
+
         <div className="card">
           <label htmlFor="machine">Machine</label>
           <select
@@ -439,17 +455,6 @@ function InspectForm() {
 
           <label>Your signature</label>
           <SignaturePad value={signature} onChange={setSignature} />
-        </div>
-
-        <div className="insp-tally">
-          <span>
-            {answered} of {TOTAL_ITEMS} answered
-          </span>
-          {flagged.length > 0 && (
-            <span className="insp-flagcount">
-              {flagged.length} needs repair
-            </span>
-          )}
         </div>
 
         {error && <p className="error">{error}</p>}
