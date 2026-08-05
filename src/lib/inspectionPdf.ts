@@ -165,18 +165,25 @@ export function buildInspectionPdf(
 
   const defectLines: { text: string; faint: boolean }[] = [];
   const columnW = CONTENT_W - inset * 2;
-  for (const f of flagged) {
-    const paragraph = `${f.section} - ${f.item}: ${f.note || "see operator"}`;
-    for (const text of wrapText(paragraph, columnW, bodySize)) {
-      defectLines.push({ text, faint: false });
-    }
-  }
+
   if (written) {
-    if (defectLines.length > 0) defectLines.push({ text: "", faint: false });
+    // The sheet's own defect text, printed as signed. It already
+    // contains the flagged items plus anything else the operator wrote,
+    // so listing the flagged items again would print them twice and
+    // still risk dropping the free text.
     for (const text of wrapText(written, columnW, bodySize)) {
       defectLines.push({ text, faint: false });
     }
+  } else {
+    // Sheets saved before the text was stored: rebuild from the marks.
+    for (const f of flagged) {
+      const paragraph = `${f.section} - ${f.item}: ${f.note || "see operator"}`;
+      for (const text of wrapText(paragraph, columnW, bodySize)) {
+        defectLines.push({ text, faint: false });
+      }
+    }
   }
+
   if (defectLines.length === 0) {
     defectLines.push({ text: "None reported.", faint: true });
   }

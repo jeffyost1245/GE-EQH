@@ -49,6 +49,7 @@ export default function SheetPaper({
 
   const company = context.companyName ?? "General Excavating";
   const flagged = flaggedItems(sheet.items ?? {});
+  const written = (sheet.defects ?? "").trim();
 
   const page = (
     <div className="paper" style={{ width: PAGE_W, minHeight: PAGE_H }}>
@@ -97,16 +98,20 @@ export default function SheetPaper({
 
       <div className="paper-block">Explanation of Defects (RR)</div>
       <div className="paper-defects">
-        {flagged.length === 0 && !sheet.defects?.trim() ? (
-          <span className="paper-none">None reported.</span>
+        {written ? (
+          // What was signed, verbatim. It already carries the flagged
+          // items and anything else the operator typed, so rebuilding it
+          // from the marks here would drop the free text — which is
+          // exactly what used to happen.
+          written.split("\n").map((line, i) => <p key={i}>{line}</p>)
+        ) : flagged.length > 0 ? (
+          flagged.map((f) => (
+            <p key={`${f.section}/${f.item}`}>
+              {f.section} — {f.item}: {f.note || "see operator"}
+            </p>
+          ))
         ) : (
-          <>
-            {flagged.map((f) => (
-              <p key={`${f.section}/${f.item}`}>
-                {f.section} — {f.item}: {f.note || "see operator"}
-              </p>
-            ))}
-          </>
+          <span className="paper-none">None reported.</span>
         )}
       </div>
 
