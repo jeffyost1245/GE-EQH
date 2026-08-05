@@ -9,9 +9,10 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import AppShell from "@/components/AppShell";
 import SheetPdfButton from "@/components/SheetPdfButton";
-import SheetThumbnail from "@/components/SheetThumbnail";
+import SheetPaper from "@/components/SheetPaper";
 import { deleteInspection, getInspection } from "@/lib/data";
-import { SECTIONS, flaggedItems, itemKey } from "@/lib/inspection";
+import { flaggedItems } from "@/lib/inspection";
+import { currentCrew } from "@/lib/tenant";
 import { InspectionWithNames } from "@/lib/types";
 import { formatDate, todayString } from "@/lib/week";
 
@@ -96,10 +97,13 @@ function Record() {
           </div>
         )}
 
-        <SheetThumbnail
-          items={sheet.items ?? {}}
-          className="sheet-mini-full"
-          fit="meet"
+        <SheetPaper
+          sheet={sheet}
+          context={{
+            machineName: sheet.machines?.name ?? "Machine",
+            operatorName: sheet.crew?.name ?? "",
+            crewName: sheet.foremen?.name ?? currentCrew()?.name ?? "",
+          }}
         />
         <SheetPdfButton sheet={sheet} className="btn" />
         {editable && (
@@ -138,50 +142,14 @@ function Record() {
         </>
       )}
 
-      {SECTIONS.map((section) => {
-        const marks = section.items.map((item) => ({
-          item,
-          answer: sheet.items[itemKey(section.key, item.name)],
-        }));
-        const notable = marks.filter((m) => m.answer?.mark !== "ok");
-        const okCount = marks.length - notable.length;
-        return (
-          <div key={section.key}>
-            <h2>{section.title}</h2>
-            <div className="card">
-              <p className="small muted" style={{ margin: 0 }}>
-                {okCount === marks.length
-                  ? `All ${marks.length} OK`
-                  : `${okCount} of ${marks.length} OK`}
-              </p>
-              {notable.map(({ item, answer }) => (
-                <div key={item.name} className="insp-row insp-recorded">
-                  <span className="insp-name">{item.name}</span>
-                  <span className={`tag tag-${answer?.mark ?? "none"}`}>
-                    {answer?.mark === "rr"
-                      ? "RR"
-                      : answer?.mark === "na"
-                        ? "N/A"
-                        : "—"}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      })}
-
-      <p className="small muted">
-        {sheet.repairs_needed
-          ? "Operator: repairs or adjustments needed."
-          : "Operator: repairs or adjustments NOT needed for safe equipment operation."}
-        {sheet.signed_at &&
-          ` Signed ${new Date(sheet.signed_at).toLocaleTimeString(undefined, {
-            hour: "numeric",
-            minute: "2-digit",
-          })}.`}
-        {!editable && " Locked — the day it covers has passed."}
-      </p>
+      {/* No item-by-item summary below: the sheet above already says all
+          of it, and two versions of the same answers invite the question
+          of which one is right. */}
+      {!editable && (
+        <p className="small muted">
+          Locked — the day it covers has passed.
+        </p>
+      )}
     </>
   );
 }

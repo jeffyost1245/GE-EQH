@@ -20,12 +20,9 @@ const GAP = 0.55;
 export default function SheetThumbnail({
   items,
   className = "sheet-mini",
-  /** Grid cards crop to a fixed height; a full-width one shows it all. */
-  fit = "slice",
 }: {
   items: InspectionItems;
   className?: string;
-  fit?: "slice" | "meet";
 }) {
   const columns = [
     [SECTIONS[0], SECTIONS[1]],
@@ -101,7 +98,7 @@ export default function SheetThumbnail({
       viewBox={`0 0 ${W} ${H}`}
       role="img"
       aria-label="Checkout sheet"
-      preserveAspectRatio={fit === "slice" ? "xMidYMin slice" : "xMidYMid meet"}
+      preserveAspectRatio="xMidYMin slice"
     >
       <rect x="0" y="0" width={W} height={H} fill="#ffffff" />
 
