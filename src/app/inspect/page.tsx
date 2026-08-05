@@ -111,6 +111,16 @@ function InspectForm() {
         setItems(existing.items ?? {});
         setSignature(existing.signature);
         setOverrideNeeded(existing.repairs_needed);
+        // The stored defect text is the generated summary of the flagged
+        // items followed by whatever else was typed. Strip the summary so
+        // the box holds what the operator actually wrote — otherwise
+        // reopening a sheet and saving it wipes their words.
+        const summary = defectSummary(existing.items ?? {});
+        const stored = existing.defects ?? "";
+        setExtra(
+          (stored.startsWith(summary) ? stored.slice(summary.length) : stored)
+            .trim()
+        );
         return;
       }
 
