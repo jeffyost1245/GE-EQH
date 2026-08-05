@@ -1,13 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import AppShell from "@/components/AppShell";
 import SheetPhotoField from "@/components/SheetPhotoField";
-import { latestEntryForMachine, listCrew, listMachines, saveEntry } from "@/lib/data";
+import {
+  inspectionForDay,
+  latestEntryForMachine,
+  listCrew,
+  listMachines,
+  saveEntry,
+} from "@/lib/data";
 import { cacheGet, cacheSet } from "@/lib/cache";
+import { clearDraft, saveDraft, takeDraft } from "@/lib/draft";
 import { formatDate, formatHours, todayString } from "@/lib/week";
-import { CrewMember, Entry, Machine } from "@/lib/types";
+import { CrewMember, Entry, InspectionWithNames, Machine } from "@/lib/types";
 
 type LatestCache = Record<
   string,
@@ -16,7 +24,10 @@ type LatestCache = Record<
 
 const NAME_KEY = "eqh_my_name";
 
-export default function LogPage() {
+function LogForm() {
+  const params = useSearchParams();
+  const resuming = params.get("resume") === "1";
+
   const [machines, setMachines] = useState<Machine[]>([]);
   const [crew, setCrew] = useState<CrewMember[]>([]);
   const [loadError, setLoadError] = useState("");
@@ -33,6 +44,11 @@ export default function LogPage() {
 
   const [prevEntry, setPrevEntry] = useState<Entry | null>(null);
   const [prevFromCache, setPrevFromCache] = useState(false);
+
+  /** Today's checkout sheet for the chosen machine, if anyone has done it. */
+  const [sheet, setSheet] = useState<InspectionWithNames | null>(null);
+  const [sheetChecked, setSheetChecked] = useState(false);
+  const restored = useRef(false);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState<"" | "synced" | "queued">("");
   const [saveError, setSaveError] = useState("");
@@ -63,6 +79,59 @@ export default function LogPage() {
       if (savedName) setCrewId(savedName);
     })();
   }, []);
+
+  // Coming back from the checkout sheet: put the entry back the way it
+  // was left, rather than making someone retype it after 35 questions.
+  useEffect(() => {
+    if (!resuming || restored.current) return;
+    restored.current = true;
+    const draft = takeDraft();
+    if (!draft) return;
+    setMachineId(draft.machineId);
+    setCrewId(draft.crewId);
+    setDate(draft.date);
+    setStartHours(draft.startHours);
+    setEndHours(draft.endHours);
+    setNote(draft.note);
+    setJobTag(draft.jobTag);
+    setPhotoPath(draft.photoPath);
+    setNeedsRepair(draft.needsRepair);
+  }, [resuming]);
+
+  /** Has anyone done this machine's checkout for this day yet? */
+  useEffect(() => {
+    let cancelled = false;
+    setSheet(null);
+    setSheetChecked(false);
+    if (!machineId) return;
+    inspectionForDay(machineId, date)
+      .then((found) => {
+        if (cancelled) return;
+        setSheet(found);
+        setSheetChecked(true);
+      })
+      // Offline, or the table isn't there: say nothing rather than
+      // claiming the check hasn't been done.
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [machineId, date]);
+
+  /** Park the half-filled entry before leaving for the sheet. */
+  function parkDraft() {
+    saveDraft({
+      machineId,
+      crewId,
+      date,
+      startHours,
+      endHours,
+      note,
+      jobTag,
+      photoPath,
+      needsRepair,
+    });
+  }
 
   const selectMachine = useCallback(async (id: string) => {
     setMachineId(id);
@@ -121,6 +190,7 @@ export default function LogPage() {
     });
     setBusy(false);
     setSaved(result);
+    clearDraft();
     // reset for the next entry, keeping name and date
     setMachineId("");
     setStartHours("");
@@ -138,6 +208,12 @@ export default function LogPage() {
   return (
     <AppShell title="Log Hours">
       {loadError && <p className="notice">{loadError}</p>}
+      {resuming && !saved && (
+        <p className="notice notice-ok">
+          ✓ Checkout sheet done. Your hours are still here — finish them and
+          hit Save.
+        </p>
+      )}
       {saved && (
         <p className={saved === "synced" ? "notice notice-ok" : "notice"}>
           {saved === "synced"
@@ -149,6 +225,7 @@ export default function LogPage() {
         <label htmlFor="machine">Machine</label>
         <select
           id="machine"
+          key={`machine-${machines.length}`}
           value={machineId}
           onChange={(e) => void selectMachine(e.target.value)}
         >
@@ -163,6 +240,7 @@ export default function LogPage() {
         <label htmlFor="name">Your name</label>
         <select
           id="name"
+          key={`name-${crew.length}`}
           value={crewId}
           onChange={(e) => pickName(e.target.value)}
         >
@@ -242,20 +320,60 @@ export default function LogPage() {
 
         <div className="sheet-choice">
           <label>Checkout sheet</label>
-          <Link
-            className="btn btn-small btn-secondary"
-            href={
-              machineId
-                ? `/inspect?machine=${machineId}&date=${date}`
-                : "/inspect"
-            }
-          >
-            📋 Fill it out here
-          </Link>
-          <p className="small muted">
-            Or photograph the paper one — either works, and anything marked
-            RR goes on the shop list the same way.
-          </p>
+
+          {sheet ? (
+            <>
+              <p className="sheet-done">
+                ✓ Already done today by{" "}
+                <strong>{sheet.crew?.name ?? "someone"}</strong>
+                {sheet.signed_at &&
+                  ` at ${new Date(sheet.signed_at).toLocaleTimeString(
+                    undefined,
+                    { hour: "numeric", minute: "2-digit" }
+                  )}`}
+                .
+              </p>
+              <div className="row">
+                <Link
+                  className="btn btn-small btn-secondary"
+                  href={`/inspections/view?id=${sheet.id}`}
+                >
+                  See it
+                </Link>
+                <Link
+                  className="btn btn-small btn-secondary"
+                  onClick={parkDraft}
+                  href={`/inspect?machine=${machineId}&date=${date}&from=log`}
+                >
+                  Something changed
+                </Link>
+              </div>
+              <p className="small muted">
+                One sheet covers the machine for the day. If something broke
+                since, open it and mark it — the sheet updates rather than a
+                second one being filed.
+              </p>
+            </>
+          ) : (
+            <>
+              <Link
+                className="btn btn-small btn-secondary"
+                onClick={parkDraft}
+                href={
+                  machineId
+                    ? `/inspect?machine=${machineId}&date=${date}&from=log`
+                    : "/inspect"
+                }
+              >
+                📋 Fill it out here
+              </Link>
+              <p className="small muted">
+                {machineId && sheetChecked
+                  ? "Nobody has done this machine today. What you've typed here is kept while you fill it out."
+                  : "Or photograph the paper one — either works, and anything marked RR goes on the shop list the same way."}
+              </p>
+            </>
+          )}
         </div>
 
         <SheetPhotoField value={photoPath} onChange={setPhotoPath} />
@@ -278,5 +396,19 @@ export default function LogPage() {
         </button>
       </form>
     </AppShell>
+  );
+}
+
+export default function LogPage() {
+  return (
+    <Suspense
+      fallback={
+        <AppShell title="Log Hours">
+          <p className="muted">Loading…</p>
+        </AppShell>
+      }
+    >
+      <LogForm />
+    </Suspense>
   );
 }

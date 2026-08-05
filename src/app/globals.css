@@ -1424,3 +1424,12 @@ button {
   -webkit-overflow-scrolling: touch;
   padding: 12px;
 }
+
+/* Someone already did this machine's checkout today. Stated plainly so
+   the second operator of the day doesn't fill out a duplicate. */
+.sheet-done {
+  margin: 0 0 10px;
+  font-size: 15.5px;
+  font-weight: 700;
+  color: var(--green);
+}
