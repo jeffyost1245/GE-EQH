@@ -7,7 +7,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import SheetPdfButton from "@/components/SheetPdfButton";
-import SheetThumbnail from "@/components/SheetThumbnail";
+import SheetPaper from "@/components/SheetPaper";
 import { entriesForWeek, getShareLink, inspectionsForWeek } from "@/lib/data";
 import { flaggedItems } from "@/lib/inspection";
 import { sheetPhotoUrls } from "@/lib/photo";
@@ -132,10 +132,13 @@ function SharedSheets() {
                 ) : (
                   <div className="badge badge-clean">All clear</div>
                 )}
-                <SheetThumbnail
-                  items={sheet.items ?? {}}
-                  className="sheet-mini-full"
-                  fit="meet"
+                <SheetPaper
+                  sheet={sheet}
+                  context={{
+                    machineName: sheet.machines?.name ?? "Machine",
+                    operatorName: sheet.crew?.name ?? "",
+                    crewName: sheet.foremen?.name ?? "",
+                  }}
                 />
                 <SheetPdfButton sheet={sheet} />
               </div>

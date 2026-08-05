@@ -1016,36 +1016,6 @@ button {
   color: var(--muted);
 }
 
-.insp-recorded {
-  padding: 8px 0;
-  border-bottom: 1px solid var(--line);
-}
-
-.insp-recorded:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
-}
-
-.tag {
-  flex: 0 0 auto;
-  padding: 3px 9px;
-  border-radius: 5px;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.05em;
-}
-
-.tag-rr {
-  color: var(--amber);
-  background: var(--amber-bg);
-}
-
-.tag-na,
-.tag-none {
-  color: var(--muted);
-  background: var(--soft);
-}
-
 .badge-repair {
   color: var(--amber);
   background: var(--amber-bg);
@@ -1121,19 +1091,6 @@ button {
   font-size: 13px;
 }
 
-/* The same drawing at full card width, where a photographed sheet would
-   have shown the whole page. */
-.sheet-mini-full {
-  display: block;
-  width: 100%;
-  height: auto;
-  aspect-ratio: 100 / 129;
-  margin-top: 12px;
-  background: #fff;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-}
-
 /* Its own line under the name, not trailing the operator. */
 .sheet-caption .badge {
   display: block;
@@ -1143,4 +1100,327 @@ button {
   font-size: 10.5px;
   padding: 2px 7px;
   overflow-wrap: anywhere;
+}
+
+/* ---------- the sheet, rendered as paper ----------
+ *
+ * Its own little world: black on white in both themes, sized in points
+ * to match the PDF. A document does not follow the app's theme any more
+ * than a photograph of one would.
+ */
+
+.paper-holder {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  margin-top: 12px;
+}
+
+.paper-scaler {
+  transform-origin: top left;
+}
+
+.paper-zoom {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+}
+
+.paper {
+  background: #fff;
+  color: #000;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 9px;
+  line-height: 1.3;
+  padding: 30px 32px;
+}
+
+.paper * {
+  box-sizing: border-box;
+}
+
+.paper-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 4px;
+}
+
+.paper-logo {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.paper-logo b {
+  font-size: 21px;
+  font-style: italic;
+  font-weight: 900;
+  color: #d81e3f;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.paper-logo span {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.paper-title {
+  text-align: right;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1.15;
+}
+
+.paper-title small {
+  display: block;
+  margin-top: 2px;
+  font-size: 7.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: #444;
+}
+
+.paper-rule {
+  height: 3px;
+  background: #d81e3f;
+  margin-bottom: 8px;
+}
+
+.paper-fields {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  border: 1px solid #000;
+  margin-bottom: 12px;
+}
+
+.paper-field {
+  padding: 3px 4px;
+  border-right: 1px solid #000;
+  border-bottom: 1px solid #000;
+  min-height: 30px;
+}
+
+.paper-field label {
+  display: block;
+  margin: 0;
+  font-size: 6.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #333;
+}
+
+.paper-field b {
+  display: block;
+  margin-top: 1px;
+  font-size: 10.5px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The grid's own outline supplies the right and bottom edges. */
+.paper-fields .paper-field:nth-child(4n) { border-right: none; }
+.paper-fields .paper-field:nth-last-child(-n + 4) { border-bottom: none; }
+
+.paper-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 14px;
+}
+
+.paper-section {
+  margin-bottom: 9px;
+}
+
+.paper-block {
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  border-bottom: 1.25px solid #000;
+  padding-bottom: 2px;
+}
+
+.paper-legend {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  padding-top: 2px;
+  font-size: 6.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #333;
+}
+
+.paper-legend span {
+  width: 13px;
+  text-align: center;
+}
+
+.paper-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-bottom: 0.5px solid #b8b8b8;
+  padding: 2px 0;
+}
+
+.paper-item-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 9px;
+}
+
+.paper-item.flagged .paper-item-name {
+  font-weight: 800;
+}
+
+.paper-item-name em {
+  font-style: normal;
+  font-size: 7px;
+  color: #444;
+}
+
+.paper-boxes {
+  flex: none;
+  display: flex;
+  gap: 9px;
+}
+
+.paper-box {
+  width: 13px;
+  height: 13px;
+  border: 1px solid #000;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.paper-box.solid {
+  background: #000;
+  color: #fff;
+}
+
+.paper-defects {
+  border: 1px solid #000;
+  min-height: 52px;
+  padding: 5px 7px;
+  font-size: 9.5px;
+  line-height: 1.45;
+  margin-top: 4px;
+}
+
+.paper-defects p {
+  margin: 0 0 3px;
+}
+
+.paper-none {
+  color: #444;
+  font-style: italic;
+}
+
+.paper-verdict {
+  display: flex;
+  gap: 20px;
+  margin-top: 8px;
+  font-size: 9px;
+}
+
+.paper-verdict .paper-box {
+  margin-right: 4px;
+  vertical-align: -2px;
+}
+
+.paper-sigs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+  margin-top: 18px;
+}
+
+.paper-sig {
+  display: block;
+  width: 100%;
+  height: 34px;
+  margin-bottom: -2px;
+}
+
+.paper-sigspace {
+  height: 34px;
+}
+
+.paper-sigline {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  border-top: 1px solid #000;
+  padding-top: 2px;
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #333;
+}
+
+.paper-sigline span:last-child {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 7.5px;
+  white-space: nowrap;
+}
+
+.paper-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 4px;
+  border-top: 0.5px solid #999;
+  font-size: 6.5px;
+  color: #555;
+}
+
+/* Full size, where it can actually be read. Scrolls both ways rather
+   than reflowing — a form that rewraps is no longer the form. */
+.paper-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: #3f444a;
+  display: flex;
+  flex-direction: column;
+}
+
+.paper-overlay-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  padding-top: calc(10px + env(safe-area-inset-top));
+  background: var(--card);
+  border-bottom: 1px solid var(--line);
+  font-weight: 700;
+  color: var(--text);
+}
+
+.paper-overlay-scroll {
+  flex: 1;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 12px;
 }
