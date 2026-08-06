@@ -13,7 +13,15 @@ const ADMIN_PATHS = ["/machines", "/crew"];
 // Where a superintendent may go. They oversee every crew but only change
 // maintenance, so the crew-scoped screens — logging hours, editing
 // entries, managing machines and people — are closed to them.
-const SUPERINTENDENT_PATHS = ["/overview", "/maintenance", "/sheets"];
+const SUPERINTENDENT_PATHS = [
+  "/fleet",
+  "/overview",
+  "/maintenance",
+  "/sheets",
+];
+
+/** Where a superintendent lands: what's free is the daily question. */
+const SUPERINTENDENT_HOME = "/fleet";
 
 export async function middleware(req: NextRequest) {
   if (!envValue("APP_PASSWORD")) {
@@ -33,11 +41,11 @@ export async function middleware(req: NextRequest) {
     const allowed = SUPERINTENDENT_PATHS.some(
       (p) => path === p || path.startsWith(`${p}/`)
     );
-    // Their home is the overview; anything crew-scoped goes there too
-    // rather than showing a screen that would be empty or misleading.
+    // Anything crew-scoped sends them home rather than showing a screen
+    // that would be empty or misleading.
     return allowed
       ? NextResponse.next()
-      : NextResponse.redirect(new URL("/overview", req.url));
+      : NextResponse.redirect(new URL(SUPERINTENDENT_HOME, req.url));
   }
 
   // Foremen have no business on the cross-crew screens.

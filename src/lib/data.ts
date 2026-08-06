@@ -759,6 +759,60 @@ export async function allEntriesForWeek(
   return data as EntryWithNames[];
 }
 
+/**
+ * Just enough of every crew's recent entries to work out what each
+ * machine has been doing. Deliberately narrow — the dispatch board reads
+ * the whole company at once, and it does not need note text or meter
+ * readings to answer "has this been used lately".
+ */
+export async function fleetActivity(since: string): Promise<
+  Pick<Entry, "machine_id" | "date" | "job_tag" | "needs_repair" | "repair_done">[]
+> {
+  const { data, error } = await getSupabase()
+    .from("entries")
+    .select("machine_id, date, job_tag, needs_repair, repair_done")
+    .gte("date", since)
+    .order("date", { ascending: false });
+  if (error) throw error;
+  return data as Pick<
+    Entry,
+    "machine_id" | "date" | "job_tag" | "needs_repair" | "repair_done"
+  >[];
+}
+
+/** The same, for checkout sheets: where a machine was and what it needs. */
+export async function fleetInspections(since: string): Promise<
+  Pick<
+    Inspection,
+    | "machine_id"
+    | "date"
+    | "job_no"
+    | "job_name"
+    | "location"
+    | "repairs_needed"
+    | "repair_done"
+  >[]
+> {
+  const { data, error } = await getSupabase()
+    .from("inspections")
+    .select(
+      "machine_id, date, job_no, job_name, location, repairs_needed, repair_done"
+    )
+    .gte("date", since)
+    .order("date", { ascending: false });
+  if (error) throw error;
+  return data as Pick<
+    Inspection,
+    | "machine_id"
+    | "date"
+    | "job_no"
+    | "job_name"
+    | "location"
+    | "repairs_needed"
+    | "repair_done"
+  >[];
+}
+
 /** Recent checkout sheets across every crew. */
 export async function allSheets(limit = 60): Promise<EntryWithNames[]> {
   const { data, error } = await getSupabase()

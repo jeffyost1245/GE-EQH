@@ -1472,3 +1472,185 @@ button {
   font-size: 13px;
   color: var(--muted);
 }
+
+/* ---------- the fleet board ----------
+ *
+ * Its own world, dark in both themes. A departure board is a lit panel
+ * in a room, not a document — and the point of it is being readable at
+ * arm's length while you decide what to send where. Monospace digits so
+ * unit numbers and idle counts line up in columns the eye can run down.
+ */
+
+.board {
+  background: #14171c;
+  color: #e7ebf0;
+  border: 1px solid #2b323a;
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+
+.board-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  background: #0d1014;
+  border-bottom: 1px solid #2b323a;
+}
+
+.board-title {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.board-when {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: #8b95a1;
+  font-variant-numeric: tabular-nums;
+}
+
+.board-counts {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-bottom: 1px solid #2b323a;
+}
+
+.board-count {
+  padding: 10px 12px;
+  border-right: 1px solid #2b323a;
+}
+
+.board-count:last-child { border-right: none; }
+
+.board-count b {
+  display: block;
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.board-count span {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #8b95a1;
+}
+
+.board-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 14px;
+  background: #1b2027;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: #9aa5b1;
+  font-variant-numeric: tabular-nums;
+}
+
+.board-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  border-bottom: 1px solid #23292f;
+}
+
+.board-group:last-child .board-row:last-child { border-bottom: none; }
+
+/* The number the yard actually calls the machine, in the leftmost
+   column where a flight number would be. */
+.board-unit {
+  flex: 0 0 46px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 16px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.board-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.board-sub {
+  display: block;
+  margin-top: 1px;
+  font-size: 12px;
+  color: #8b95a1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.board-status {
+  flex: 0 0 auto;
+  text-align: right;
+}
+
+.board-flag {
+  display: block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+}
+
+.board-idle {
+  display: block;
+  margin-top: 1px;
+  font-size: 11px;
+  color: #79838f;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Semantic, not decorative: amber is the one Spoon is hunting for. */
+.board-flag.is-available { color: #f5b731; }
+.board-flag.is-down { color: #ff6b7f; }
+.board-flag.is-working { color: #6f7b88; }
+.board-flag.is-unused { color: #8fb8e8; }
+.board-flag.is-stock { color: #8b95a1; }
+
+.board-row.is-available { background: #1d1a10; }
+.board-row.is-down { background: #201317; }
+
+.board-count b.is-available { color: #f5b731; }
+.board-count b.is-down { color: #ff6b7f; }
+
+.board-empty {
+  padding: 16px 14px;
+  margin: 0;
+  color: #8b95a1;
+}
+
+/* The flap: rows settle in on load, quickly, and only once. */
+@media (prefers-reduced-motion: no-preference) {
+  .board-row {
+    animation: board-flap 220ms ease-out both;
+  }
+}
+
+@keyframes board-flap {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
