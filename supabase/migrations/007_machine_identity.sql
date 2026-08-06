@@ -11,8 +11,14 @@
 -- company-wide, and it has to be safe to deploy on its own.
 
 alter table machines add column if not exists unit_no text;
-alter table machines add column if not exists make_model text;
 alter table machines add column if not exists machine_type text;
+
+-- Added and then abandoned in the same afternoon: a separate make/model
+-- column turned out to duplicate `name`, which every screen already
+-- reads. `name` holds the make and model and the machines screen labels
+-- it that way. Kept here so the column exists on databases that already
+-- ran this file; it goes when the fleet migration lands.
+alter table machines add column if not exists make_model text;
 
 -- Deliberately NOT unique yet. The same physical machine may well be
 -- entered under two crews right now — that is exactly what the numbers
