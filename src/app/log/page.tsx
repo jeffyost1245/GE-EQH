@@ -13,6 +13,7 @@ import {
   saveEntry,
 } from "@/lib/data";
 import { cacheGet, cacheSet } from "@/lib/cache";
+import { machineLabel } from "@/lib/machineTypes";
 import { clearDraft, saveDraft, takeDraft } from "@/lib/draft";
 import { formatDate, formatHours, todayString } from "@/lib/week";
 import { CrewMember, Entry, InspectionWithNames, Machine } from "@/lib/types";
@@ -232,7 +233,7 @@ function LogForm() {
           <option value="">Choose machine…</option>
           {machines.map((m) => (
             <option key={m.id} value={m.id}>
-              {m.name}
+              {machineLabel(m)}
             </option>
           ))}
         </select>

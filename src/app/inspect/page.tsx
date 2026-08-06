@@ -17,6 +17,7 @@ import {
   todaysJobFields,
 } from "@/lib/data";
 import { cacheGet, cacheSet } from "@/lib/cache";
+import { machineLabel } from "@/lib/machineTypes";
 import {
   SECTIONS,
   TOTAL_ITEMS,
@@ -273,7 +274,7 @@ function InspectForm() {
             <option value="">Choose machine…</option>
             {machines.map((m) => (
               <option key={m.id} value={m.id}>
-                {m.name}
+                {machineLabel(m)}
               </option>
             ))}
           </select>

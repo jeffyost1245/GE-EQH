@@ -9,8 +9,14 @@ import {
   listMachines,
   machineEntryCount,
   renameMachine,
+  setMachineDetails,
   setMachineStatus,
 } from "@/lib/data";
+import {
+  MACHINE_TYPES,
+  normalizeUnit,
+  typeLabel,
+} from "@/lib/machineTypes";
 import { Machine } from "@/lib/types";
 
 export default function MachinesPage() {
@@ -20,9 +26,12 @@ export default function MachinesPage() {
   const [info, setInfo] = useState("");
   const [busy, setBusy] = useState(false);
 
-  // inline rename state
+  // Inline editor: name plus the identity fields, edited together.
   const [editId, setEditId] = useState("");
   const [editName, setEditName] = useState("");
+  const [editUnit, setEditUnit] = useState("");
+  const [editModel, setEditModel] = useState("");
+  const [editType, setEditType] = useState("");
 
   const refresh = useCallback(async () => {
     try {
@@ -56,6 +65,9 @@ export default function MachinesPage() {
   function startEdit(m: Machine) {
     setEditId(m.id);
     setEditName(m.name);
+    setEditUnit(m.unit_no ?? "");
+    setEditModel(m.make_model ?? "");
+    setEditType(m.machine_type ?? "");
     setError("");
     setInfo("");
   }
@@ -64,12 +76,23 @@ export default function MachinesPage() {
     const trimmed = editName.trim();
     if (!trimmed) return;
     setBusy(true);
+    setError("");
     try {
-      await renameMachine(editId, trimmed);
+      const machine = (machines ?? []).find((m) => m.id === editId);
+      if (machine && trimmed !== machine.name) {
+        await renameMachine(editId, trimmed);
+      }
+      await setMachineDetails(editId, {
+        unit_no: editUnit.trim() ? normalizeUnit(editUnit) : null,
+        make_model: editModel.trim() || null,
+        machine_type: editType || null,
+      });
       setEditId("");
       await refresh();
     } catch {
-      setError("Couldn't rename — check your signal and try again.");
+      setError(
+        "Couldn't save. If the unit number fields are new to you, the database migration may not have been run yet."
+      );
     } finally {
       setBusy(false);
     }
@@ -116,45 +139,98 @@ export default function MachinesPage() {
 
   const active = (machines ?? []).filter((m) => m.status === "active");
   const retired = (machines ?? []).filter((m) => m.status === "inactive");
+  const unnumbered = active.filter((m) => !m.unit_no).length;
 
   function row(m: Machine, retiredRow: boolean) {
     if (editId === m.id) {
       return (
-        <div className="list-row" key={m.id}>
+        <div className="machine-edit" key={m.id}>
+          <label htmlFor="e-unit">Unit number</label>
           <input
+            id="e-unit"
             type="text"
-            className="grow"
-            value={editName}
+            inputMode="text"
+            autoCapitalize="characters"
+            placeholder="925"
+            value={editUnit}
             autoFocus
+            onChange={(e) => setEditUnit(e.target.value)}
+          />
+          <p className="small muted">
+            The company&apos;s number for this machine — three characters,
+            sometimes with a letter, like 741 or 871R.
+          </p>
+
+          <label htmlFor="e-name">Name</label>
+          <input
+            id="e-name"
+            type="text"
+            value={editName}
             onChange={(e) => setEditName(e.target.value)}
           />
-          <button
-            className="btn btn-small"
-            disabled={busy || !editName.trim()}
-            onClick={() => void saveEdit()}
+
+          <label htmlFor="e-model">Make and model</label>
+          <input
+            id="e-model"
+            type="text"
+            placeholder="John Deere 510"
+            value={editModel}
+            onChange={(e) => setEditModel(e.target.value)}
+          />
+
+          <label htmlFor="e-type">Type</label>
+          <select
+            id="e-type"
+            value={editType}
+            onChange={(e) => setEditType(e.target.value)}
           >
-            Save
-          </button>
-          <button
-            className="btn btn-small btn-secondary"
-            onClick={() => setEditId("")}
-          >
-            Cancel
-          </button>
+            <option value="">Choose type…</option>
+            {MACHINE_TYPES.map((t) => (
+              <option key={t.key} value={t.key}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+
+          <div className="row" style={{ marginTop: 14 }}>
+            <button
+              className="btn btn-small"
+              disabled={busy || !editName.trim()}
+              onClick={() => void saveEdit()}
+            >
+              Save
+            </button>
+            <button
+              className="btn btn-small btn-secondary"
+              onClick={() => setEditId("")}
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       );
     }
     return (
       <div className="list-row" key={m.id}>
-        <span className={retiredRow ? "inactive-name grow" : "stat-name grow"}>
-          {m.name}
+        <span className={retiredRow ? "inactive-name grow" : "grow"}>
+          <span className="machine-line">
+            {m.unit_no && <span className="unit-no">{m.unit_no}</span>}
+            <span className="stat-name">{m.name}</span>
+          </span>
+          {(m.machine_type || m.make_model) && (
+            <span className="machine-sub">
+              {[typeLabel(m.machine_type ?? null), m.make_model]
+                .filter(Boolean)
+                .join(" · ")}
+            </span>
+          )}
         </span>
         <div className="row-actions">
           <button
             className="btn btn-small btn-secondary"
             onClick={() => startEdit(m)}
           >
-            Rename
+            Edit
           </button>
           <button
             className="btn btn-small btn-secondary"
@@ -182,6 +258,15 @@ export default function MachinesPage() {
       </div>
       {error && <p className="error">{error}</p>}
       {info && <p className="notice">{info}</p>}
+
+      {machines && unnumbered > 0 && (
+        <p className="notice">
+          {unnumbered} {unnumbered === 1 ? "machine has" : "machines have"} no
+          unit number yet. Tap Edit and add it — it&apos;s what lets the
+          company tell two of the same machine apart.
+        </p>
+      )}
+
       <form className="card row" onSubmit={add}>
         <input
           type="text"
