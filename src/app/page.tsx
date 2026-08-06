@@ -6,6 +6,7 @@ import AppShell from "@/components/AppShell";
 import CrewBar from "@/components/CrewBar";
 import WeeklySheets from "@/components/WeeklySheets";
 import { entriesForWeek } from "@/lib/data";
+import { machineLabel } from "@/lib/machineTypes";
 import {
   formatDayHeading,
   formatHours,
@@ -43,7 +44,7 @@ function groupByDayAndMachine(
     const byMachine = days.get(e.date) ?? new Map<string, MachineDay>();
     const group: MachineDay = byMachine.get(e.machine_id) ?? {
       machineId: e.machine_id,
-      machine: e.machines?.name ?? "Unknown machine",
+      machine: e.machines ? machineLabel(e.machines) : "Unknown machine",
       hours: 0,
       open: 0,
       meterStart: null,

@@ -67,8 +67,14 @@ export interface ShareLink {
   expires_at: string;
 }
 
+/** The machine as it comes back from an embed: model plus unit number. */
+export interface NamedMachine {
+  name: string;
+  unit_no?: string | null;
+}
+
 export interface EntryWithNames extends Entry {
-  machines: { name: string } | null;
+  machines: NamedMachine | null;
   crew: { name: string } | null;
   /** Present on cross-crew queries so items can be labelled by crew. */
   foremen?: { name: string } | null;
@@ -121,7 +127,7 @@ export interface Inspection {
 }
 
 export interface InspectionWithNames extends Inspection {
-  machines: { name: string } | null;
+  machines: NamedMachine | null;
   crew: { name: string } | null;
   foremen?: { name: string } | null;
 }

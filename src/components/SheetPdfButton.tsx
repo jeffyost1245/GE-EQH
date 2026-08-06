@@ -6,6 +6,7 @@
 
 import { useState } from "react";
 import { buildInspectionPdf, inspectionFilename } from "@/lib/inspectionPdf";
+import { machineLabel } from "@/lib/machineTypes";
 import { currentCrew } from "@/lib/tenant";
 import { InspectionWithNames } from "@/lib/types";
 
@@ -28,7 +29,7 @@ export default function SheetPdfButton({
     );
     try {
       const blob = buildInspectionPdf(sheet, {
-        machineName: sheet.machines?.name ?? "Machine",
+        machineName: sheet.machines ? machineLabel(sheet.machines) : "Machine",
         operatorName: sheet.crew?.name ?? "",
         crewName: sheet.foremen?.name ?? currentCrew()?.name ?? "",
       });

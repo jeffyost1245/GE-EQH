@@ -17,6 +17,7 @@ import {
   removeEntryPhoto,
 } from "@/lib/data";
 import { flagBadgeText, flaggedItems } from "@/lib/inspection";
+import { machineLabel } from "@/lib/machineTypes";
 import { sheetPhotoUrls } from "@/lib/photo";
 import SheetThumbnail from "./SheetThumbnail";
 import { EntryWithNames, InspectionItems, InspectionWithNames } from "@/lib/types";
@@ -88,7 +89,7 @@ export default function WeeklySheets({
           kind: "sheet",
           id: s.id,
           date: s.date,
-          machine: s.machines?.name ?? "Machine",
+          machine: s.machines ? machineLabel(s.machines) : "Machine",
           who: s.crew?.name ?? "",
           items: s.items ?? {},
           needsRepair: flaggedItems(s.items ?? {}).length > 0,
@@ -100,7 +101,7 @@ export default function WeeklySheets({
           kind: "photo",
           id: e.id,
           date: e.date,
-          machine: e.machines?.name ?? "Unknown",
+          machine: e.machines ? machineLabel(e.machines) : "Unknown",
           who: e.crew?.name ?? "",
           path: e.photo_path!,
         })

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import AppShell from "@/components/AppShell";
 import { listEntries } from "@/lib/data";
+import { machineLabel } from "@/lib/machineTypes";
 import { formatDate, formatHours } from "@/lib/week";
 import { EntryWithNames } from "@/lib/types";
 
@@ -41,7 +42,7 @@ export default function EntriesPage() {
               className="entry-item"
             >
               <div className="entry-top">
-                <span>{e.machines?.name ?? "Unknown machine"}</span>
+                <span>{e.machines ? machineLabel(e.machines) : "Unknown machine"}</span>
                 <span className="entry-hours">
                   {formatHours(e.start_hours)} →{" "}
                   {e.end_hours != null ? (

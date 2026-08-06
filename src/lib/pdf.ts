@@ -100,6 +100,8 @@ function ascii(str: string): string {
     .replace(/[‘’]/g, "'")
     .replace(/[“”]/g, '"')
     .replace(/[–—]/g, "-")
+    // The machine label separates its unit number with a middle dot.
+    .replace(/\s*[·•]\s*/g, " - ")
     .replace(/[^\x20-\x7e\n]/g, "");
 }
 
