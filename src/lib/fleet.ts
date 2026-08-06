@@ -75,7 +75,9 @@ export function buildFleet(
   machines: (Machine & { foremen?: { name: string } | null })[],
   activity: ActivityRow[],
   sheets: SheetRow[],
-  today: string
+  today: string,
+  /** machine id → the crews holding it. Empty means nobody. */
+  holders: Record<string, string[]> = {}
 ): FleetRow[] {
   // Both lists arrive newest first, so the first hit for a machine is
   // its most recent.
@@ -101,7 +103,7 @@ export function buildFleet(
 
     return {
       machine,
-      crew: machine.foremen?.name ?? "—",
+      crew: (holders[machine.id] ?? []).join(", ") || "Unassigned",
       status: statusFor(machine, flagged, idleDays),
       idleDays,
       lastWorked,

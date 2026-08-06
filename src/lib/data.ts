@@ -38,32 +38,105 @@ export async function listForemen(): Promise<Foreman[]> {
 
 // ---------- machines ----------
 
+/**
+ * The machines this crew is holding. Read through crew_machines rather
+ * than machines.foreman_id: a machine belongs to the company, and more
+ * than one crew can have it on their list at the same time.
+ */
 export async function listMachines(activeOnly = false): Promise<Machine[]> {
-  let q = getSupabase()
-    .from("machines")
-    .select("*")
-    .eq("foreman_id", requireCrewId())
-    .order("name");
-  if (activeOnly) q = q.eq("status", "active");
-  const { data, error } = await q;
+  const { data, error } = await getSupabase()
+    .from("crew_machines")
+    .select("machine:machines(*)")
+    .eq("foreman_id", requireCrewId());
   if (error) throw error;
-  return data as Machine[];
+
+  const machines = (data ?? [])
+    .map((row) => (row as unknown as { machine: Machine }).machine)
+    .filter((m): m is Machine => Boolean(m));
+
+  return machines
+    .filter((m) => !activeOnly || m.status === "active")
+    .sort((a, b) => machineSortKey(a).localeCompare(machineSortKey(b)));
 }
 
+/** Unit number first where there is one, so lists read like the yard. */
+function machineSortKey(machine: Machine): string {
+  return `${machine.unit_no ?? "zzz"} ${machine.name}`;
+}
+
+/**
+ * Find a machine anywhere in the company by its unit number. This is what
+ * stops a second 311R being created when a crew is handed the first one.
+ */
+export async function findMachineByUnit(
+  unit: string
+): Promise<Machine | null> {
+  const { data, error } = await getSupabase()
+    .from("machines")
+    .select("*")
+    .ilike("unit_no", unit.trim())
+    .limit(1);
+  if (error) throw error;
+  return (data?.[0] as Machine) ?? null;
+}
+
+/** Put an existing company machine on this crew's list. */
+export async function attachMachine(machineId: string): Promise<void> {
+  const { error } = await getSupabase()
+    .from("crew_machines")
+    .upsert(
+      { foreman_id: requireCrewId(), machine_id: machineId },
+      { onConflict: "foreman_id,machine_id" }
+    );
+  if (error) throw error;
+}
+
+/**
+ * Take a machine off this crew's list. The machine and every hour ever
+ * logged on it stay — this is handing it back, not scrapping it.
+ */
+export async function detachMachine(machineId: string): Promise<void> {
+  const { error } = await getSupabase()
+    .from("crew_machines")
+    .delete()
+    .eq("foreman_id", requireCrewId())
+    .eq("machine_id", machineId);
+  if (error) throw error;
+}
+
+/** Which crews currently hold a machine. */
+export async function crewsHolding(machineId: string): Promise<string[]> {
+  const { data, error } = await getSupabase()
+    .from("crew_machines")
+    .select("foremen(name)")
+    .eq("machine_id", machineId);
+  if (error) throw error;
+  return (data ?? [])
+    .map((row) => (row as unknown as { foremen?: { name: string } }).foremen?.name)
+    .filter((name): name is string => Boolean(name));
+}
+
+/**
+ * Put a machine the company has never seen into the fleet, and onto the
+ * adding crew's list. foreman_id records who entered it, not who owns
+ * it — the crew_machines row is what makes it show up in their dropdown.
+ */
 export async function addMachine(
   name: string,
   details?: Partial<MachineDetails>
 ): Promise<void> {
-  // Only name the identity columns when there's something to put in
-  // them, so adding a machine still works against a database that
-  // hasn't had the identity migration applied yet.
   const identity = Object.fromEntries(
     Object.entries(details ?? {}).filter(([, value]) => value)
   );
-  const { error } = await getSupabase()
+  const { data, error } = await getSupabase()
     .from("machines")
-    .insert({ name, ...identity, foreman_id: requireCrewId() });
+    .insert({ name, ...identity, foreman_id: requireCrewId() })
+    .select("id")
+    .limit(1);
   if (error) throw error;
+
+  const created = (data?.[0] as { id: string } | undefined)?.id;
+  if (created) await attachMachine(created);
 }
 
 /** Set the unit number, make/model and type on an existing machine. */
@@ -74,7 +147,6 @@ export async function setMachineDetails(
   const { error } = await getSupabase()
     .from("machines")
     .update(details)
-    .eq("foreman_id", requireCrewId())
     .eq("id", id);
   if (error) throw error;
 }
@@ -86,7 +158,6 @@ export async function setMachineStatus(
   const { error } = await getSupabase()
     .from("machines")
     .update({ status })
-    .eq("foreman_id", requireCrewId())
     .eq("id", id);
   if (error) throw error;
 }
@@ -95,7 +166,6 @@ export async function renameMachine(id: string, name: string): Promise<void> {
   const { error } = await getSupabase()
     .from("machines")
     .update({ name })
-    .eq("foreman_id", requireCrewId())
     .eq("id", id);
   if (error) throw error;
 }
@@ -104,23 +174,20 @@ export async function machineEntryCount(id: string): Promise<number> {
   const { count, error } = await getSupabase()
     .from("entries")
     .select("id", { count: "exact", head: true })
-    .eq("foreman_id", requireCrewId())
     .eq("machine_id", id);
   if (error) throw error;
   return count ?? 0;
 }
 
 /**
- * Hard-delete a machine. Only safe when it has no entries — history must
- * never be orphaned. Callers check machineEntryCount first; the DB's
- * foreign key is the backstop if they don't.
+ * Hard-delete a machine from the company fleet. Only safe when it has no
+ * entries — history must never be orphaned — so callers check
+ * machineEntryCount first and the foreign key is the backstop if they
+ * don't. Foremen hand machines back instead; this is for cleaning up a
+ * duplicate that was never used.
  */
 export async function deleteMachine(id: string): Promise<void> {
-  const { error } = await getSupabase()
-    .from("machines")
-    .delete()
-    .eq("foreman_id", requireCrewId())
-    .eq("id", id);
+  const { error } = await getSupabase().from("machines").delete().eq("id", id);
   if (error) throw error;
 }
 
@@ -194,19 +261,27 @@ export async function deleteCrewMember(id: string): Promise<void> {
 
 // ---------- entries ----------
 
+/**
+ * The machine's most recent entry, from whichever crew logged it.
+ *
+ * Deliberately not scoped to the signed-in crew. There is one meter on
+ * the machine, so there is one history: if Jake's crew ran it Tuesday and
+ * Happy's crew takes it Wednesday, Happy starts from Jake's reading. The
+ * crew name comes back so the screen can say whose reading it is rather
+ * than a number appearing out of nowhere.
+ */
 export async function latestEntryForMachine(
   machineId: string
-): Promise<Entry | null> {
+): Promise<EntryWithNames | null> {
   const { data, error } = await getSupabase()
     .from("entries")
-    .select("*")
-    .eq("foreman_id", requireCrewId())
+    .select("*, foremen(name)")
     .eq("machine_id", machineId)
     .order("date", { ascending: false })
     .order("created_at", { ascending: false })
     .limit(1);
   if (error) throw error;
-  return (data?.[0] as Entry) ?? null;
+  return (data?.[0] as EntryWithNames) ?? null;
 }
 
 /**
@@ -251,9 +326,11 @@ export async function createEntryOnline(entry: NewEntry): Promise<void> {
         end_hours_autofilled: true,
         updated_at: new Date().toISOString(),
       })
-      .eq("foreman_id", requireCrewId())
       .eq("id", prev.id)
-      .is("end_hours", null); // don't clobber if someone filled it meanwhile
+      // Whoever left it open, this closes it — including another crew,
+      // which is what a handover is. Still refuses to clobber a reading
+      // somebody has since filled in.
+      .is("end_hours", null);
     if (backfillError) throw backfillError;
   }
 }
@@ -731,6 +808,27 @@ export async function setRepairDone(
     .update(patch)
     .eq("id", entryId);
   if (error) throw error;
+}
+
+/**
+ * Who is holding what, company-wide. Machines no longer belong to a
+ * crew, so the board has to ask the lists rather than the machine.
+ */
+export async function allMachineHolders(): Promise<Record<string, string[]>> {
+  const { data, error } = await getSupabase()
+    .from("crew_machines")
+    .select("machine_id, foremen(name)");
+  if (error) throw error;
+  const held: Record<string, string[]> = {};
+  for (const row of (data ?? []) as unknown as {
+    machine_id: string;
+    foremen?: { name: string } | null;
+  }[]) {
+    const name = row.foremen?.name;
+    if (!name) continue;
+    held[row.machine_id] = [...(held[row.machine_id] ?? []), name];
+  }
+  return held;
 }
 
 /** Every crew's machines, for the overview. */
