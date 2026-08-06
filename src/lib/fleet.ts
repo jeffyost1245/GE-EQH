@@ -21,7 +21,7 @@ export type FleetStatus =
   | "stock"; // an attachment: no meter, so no such thing as idle
 
 export interface FleetRow {
-  machine: Machine & { foremen?: { name: string } | null };
+  machine: Machine;
   crew: string;
   status: FleetStatus;
   /** Working days since it last turned a wheel; null if it never has. */
@@ -72,7 +72,7 @@ function parseDate(value: string): Date {
 }
 
 export function buildFleet(
-  machines: (Machine & { foremen?: { name: string } | null })[],
+  machines: Machine[],
   activity: ActivityRow[],
   sheets: SheetRow[],
   today: string,
