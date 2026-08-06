@@ -22,9 +22,9 @@ import {
   fleetActivity,
   fleetInspections,
 } from "@/lib/data";
+import { describeError } from "@/lib/errors";
 import { FleetRow, IDLE_THRESHOLD, buildFleet } from "@/lib/fleet";
 import { MACHINE_TYPES } from "@/lib/machineTypes";
-import { Machine } from "@/lib/types";
 import { toDateString, todayString } from "@/lib/week";
 
 /** How far back to look. Beyond this a machine is idle either way. */
@@ -48,12 +48,10 @@ export default function FleetPage() {
       allMachineHolders().catch(() => ({})),
     ])
       .then(([machines, activity, sheets, holders]) => {
-        const active = (
-          machines as (Machine & { foremen?: { name: string } | null })[]
-        ).filter((m) => m.status === "active");
+        const active = machines.filter((m) => m.status === "active");
         setRows(buildFleet(active, activity, sheets, todayString(), holders));
       })
-      .catch(() => setError("Can't reach the server — check your signal."));
+      .catch((cause) => setError(describeError(cause)));
   }, []);
 
   const untyped = (rows ?? []).filter(

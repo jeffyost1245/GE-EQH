@@ -832,15 +832,24 @@ export async function allMachineHolders(): Promise<Record<string, string[]>> {
 }
 
 /** Every crew's machines, for the overview. */
-export async function allMachines(): Promise<
-  (Machine & { foremen?: { name: string } | null })[]
-> {
+/**
+ * The whole company fleet.
+ *
+ * No foremen embed. crew_machines gives PostgREST a second path from
+ * machines to foremen — the direct column and a many-to-many through the
+ * join table — and it refuses a query it cannot disambiguate. It is also
+ * the wrong question now: who holds a machine is allMachineHolders(),
+ * and machines.foreman_id only records who first entered it.
+ */
+export async function allMachines(): Promise<Machine[]> {
   const { data, error } = await getSupabase()
     .from("machines")
-    .select("*, foremen(name)")
+    .select(
+      "id, name, status, created_at, unit_no, machine_type"
+    )
     .order("name");
   if (error) throw error;
-  return data as (Machine & { foremen?: { name: string } | null })[];
+  return data as Machine[];
 }
 
 /** Every crew's entries for a week, for the overview. */

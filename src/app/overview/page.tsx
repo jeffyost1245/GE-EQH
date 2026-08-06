@@ -8,8 +8,8 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import AppShell from "@/components/AppShell";
 import CrewBar from "@/components/CrewBar";
-import { allEntriesForWeek, allMachines, allRepairs } from "@/lib/data";
-import { EntryWithNames, Machine } from "@/lib/types";
+import { allMachineHolders, allEntriesForWeek, allRepairs } from "@/lib/data";
+import { EntryWithNames } from "@/lib/types";
 import { formatHours, weekLabel, weekRange } from "@/lib/week";
 
 interface CrewSummary {
@@ -23,9 +23,8 @@ interface CrewSummary {
 export default function OverviewPage() {
   const [offset, setOffset] = useState(0);
   const [entries, setEntries] = useState<EntryWithNames[] | null>(null);
-  const [machines, setMachines] = useState<
-    (Machine & { foremen?: { name: string } | null })[]
-  >([]);
+  /** machine id → the crews holding it. Machines are company iron now. */
+  const [holders, setHolders] = useState<Record<string, string[]>>({});
   const [repairs, setRepairs] = useState<EntryWithNames[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -38,13 +37,13 @@ export default function OverviewPage() {
     setError("");
     Promise.all([
       allEntriesForWeek(week.start, week.end),
-      allMachines(),
+      allMachineHolders(),
       allRepairs(false),
     ])
-      .then(([e, m, r]) => {
+      .then(([e, h, r]) => {
         if (cancelled) return;
         setEntries(e);
-        setMachines(m);
+        setHolders(h);
         setRepairs(r);
       })
       .catch(() => {
@@ -71,8 +70,10 @@ export default function OverviewPage() {
       map.set(crew, s);
       return s;
     };
-    for (const m of machines) {
-      if (m.status === "active") bump(m.foremen?.name ?? "Unknown").machines += 1;
+    // A machine counts for every crew holding it: two crews sharing a
+    // skid steer both have one to run.
+    for (const crews of Object.values(holders)) {
+      for (const crew of crews) bump(crew).machines += 1;
     }
     for (const e of entries ?? []) {
       const s = bump(e.foremen?.name ?? "Unknown");
@@ -81,7 +82,7 @@ export default function OverviewPage() {
     }
     for (const r of repairs) bump(r.foremen?.name ?? "Unknown").repairs += 1;
     return [...map.values()].sort((a, b) => a.crew.localeCompare(b.crew));
-  }, [entries, machines, repairs]);
+  }, [entries, holders, repairs]);
 
   const companyHours = summaries.reduce((n, s) => n + s.hours, 0);
 
