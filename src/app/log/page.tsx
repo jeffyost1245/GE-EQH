@@ -16,7 +16,13 @@ import { cacheGet, cacheSet } from "@/lib/cache";
 import { machineLabel } from "@/lib/machineTypes";
 import { clearDraft, saveDraft, takeDraft } from "@/lib/draft";
 import { formatDate, formatHours, todayString } from "@/lib/week";
-import { CrewMember, Entry, InspectionWithNames, Machine } from "@/lib/types";
+import {
+  CrewMember,
+  EntryWithNames,
+  InspectionWithNames,
+  Machine,
+} from "@/lib/types";
+import { currentCrew } from "@/lib/tenant";
 
 type LatestCache = Record<
   string,
@@ -43,7 +49,7 @@ function LogForm() {
   const [photoPath, setPhotoPath] = useState<string | null>(null);
   const [needsRepair, setNeedsRepair] = useState(false);
 
-  const [prevEntry, setPrevEntry] = useState<Entry | null>(null);
+  const [prevEntry, setPrevEntry] = useState<EntryWithNames | null>(null);
   const [prevFromCache, setPrevFromCache] = useState(false);
 
   /** Today's checkout sheet for the chosen machine, if anyone has done it. */
@@ -206,6 +212,17 @@ function LogForm() {
 
   const willBackfill = prevEntry !== null && prevEntry.end_hours === null;
 
+  /**
+   * Whose reading this is. One machine has one meter, so the number may
+   * well come from another crew — saying so stops it looking like a bug.
+   */
+  function whoLast(entry: EntryWithNames): string {
+    const crew = entry.foremen?.name;
+    return !crew || crew === currentCrew()?.name
+      ? "the last entry"
+      : `${crew}'s crew`;
+  }
+
   return (
     <AppShell title="Log Hours">
       {loadError && <p className="notice">{loadError}</p>}
@@ -273,9 +290,9 @@ function LogForm() {
         />
         {prevEntry && prevEntry.end_hours != null && (
           <p className="small muted">
-            Prefilled from the last entry ({formatDate(prevEntry.date)}, ended
-            at {formatHours(prevEntry.end_hours)}). Change it if the meter
-            reads different.
+            Prefilled from {whoLast(prevEntry)} ({formatDate(prevEntry.date)},
+            ended at {formatHours(prevEntry.end_hours)}). Change it if the
+            meter reads different.
           </p>
         )}
         {prevFromCache && (
@@ -285,9 +302,9 @@ function LogForm() {
         )}
         {willBackfill && (
           <p className="notice">
-            The last entry for this machine ({formatDate(prevEntry!.date)}) was
-            never closed out. Your start hours will be used to fill in its end
-            hours automatically.
+            {whoLast(prevEntry!)} left this machine&apos;s{" "}
+            {formatDate(prevEntry!.date)} entry open. Your start hours will
+            close it out.
           </p>
         )}
 

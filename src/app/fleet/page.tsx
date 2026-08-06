@@ -16,7 +16,12 @@ import Link from "next/link";
 import AppShell from "@/components/AppShell";
 import CrewBar from "@/components/CrewBar";
 import FleetBoard from "@/components/FleetBoard";
-import { allMachines, fleetActivity, fleetInspections } from "@/lib/data";
+import {
+  allMachineHolders,
+  allMachines,
+  fleetActivity,
+  fleetInspections,
+} from "@/lib/data";
 import { FleetRow, IDLE_THRESHOLD, buildFleet } from "@/lib/fleet";
 import { MACHINE_TYPES } from "@/lib/machineTypes";
 import { Machine } from "@/lib/types";
@@ -40,12 +45,13 @@ export default function FleetPage() {
       // No inspections yet: the board still works off hours alone, it
       // just cannot say where anything is.
       fleetInspections(sinceStr).catch(() => []),
+      allMachineHolders().catch(() => ({})),
     ])
-      .then(([machines, activity, sheets]) => {
+      .then(([machines, activity, sheets, holders]) => {
         const active = (
           machines as (Machine & { foremen?: { name: string } | null })[]
         ).filter((m) => m.status === "active");
-        setRows(buildFleet(active, activity, sheets, todayString()));
+        setRows(buildFleet(active, activity, sheets, todayString(), holders));
       })
       .catch(() => setError("Can't reach the server — check your signal."));
   }, []);

@@ -5,9 +5,11 @@ import AppShell from "@/components/AppShell";
 import LockAdmin from "@/components/LockAdmin";
 import {
   addMachine,
-  deleteMachine,
+  attachMachine,
+  crewsHolding,
+  detachMachine,
+  findMachineByUnit,
   listMachines,
-  machineEntryCount,
   renameMachine,
   setMachineDetails,
   setMachineStatus,
@@ -68,15 +70,25 @@ export default function MachinesPage() {
   async function saveEdit() {
     const trimmed = editName.trim();
     if (!trimmed) return;
-    const details = {
-      unit_no: editUnit.trim() ? normalizeUnit(editUnit) : null,
-      machine_type: editType || null,
-    };
+    const unit = editUnit.trim() ? normalizeUnit(editUnit) : null;
+    const details = { unit_no: unit, machine_type: editType || null };
 
     setBusy(true);
     setError("");
     try {
       if (editId === NEW) {
+        // Somebody else in the company may already have this machine.
+        // Attaching to it is what keeps one hour meter per machine.
+        const existing = unit ? await findMachineByUnit(unit) : null;
+        if (existing) {
+          await attachMachine(existing.id);
+          setEditId("");
+          setInfo(
+            `${existing.unit_no} is already in the company fleet as "${existing.name}" — added it to your list rather than creating a second one. Its hours carry over.`
+          );
+          await refresh();
+          return;
+        }
         await addMachine(trimmed, details);
       } else {
         const machine = (machines ?? []).find((m) => m.id === editId);
@@ -107,29 +119,26 @@ export default function MachinesPage() {
     }
   }
 
+  /**
+   * Hand a machine back. It leaves this crew's list and stays in the
+   * company fleet with every hour ever logged on it — which is why there
+   * is no confirmation to lose work over.
+   */
   async function remove(m: Machine) {
     setError("");
     setInfo("");
     setBusy(true);
     try {
-      const count = await machineEntryCount(m.id);
-      if (count > 0) {
-        setInfo(
-          `"${m.name}" has ${count} logged ${
-            count === 1 ? "entry" : "entries"
-          }, so it can't be deleted — that history stays. Retire it instead to hide it from the dropdowns.`
-        );
-        return;
-      }
-      if (
-        !window.confirm(`Delete "${m.name}" permanently? This can't be undone.`)
-      ) {
-        return;
-      }
-      await deleteMachine(m.id);
+      await detachMachine(m.id);
+      const others = await crewsHolding(m.id).catch(() => []);
+      setInfo(
+        others.length
+          ? `Took ${m.unit_no ?? m.name} off your list. ${others.join(" and ")} still ${others.length === 1 ? "has" : "have"} it.`
+          : `Took ${m.unit_no ?? m.name} off your list. Nobody has it now — it shows as unassigned on the fleet board.`
+      );
       await refresh();
     } catch {
-      setError("Couldn't delete — check your signal and try again.");
+      setError("Couldn't do that — check your signal and try again.");
     } finally {
       setBusy(false);
     }
@@ -156,7 +165,9 @@ export default function MachinesPage() {
         />
         <p className="small muted">
           The company&apos;s number for this machine — three characters,
-          sometimes with a letter, like 741 or 871R.
+          sometimes with a letter, like 741 or 871R. If the company already
+          has this number, it gets added to your list rather than created
+          again, and its hours carry over.
         </p>
 
         <label htmlFor="e-name">Make and model</label>
@@ -242,7 +253,7 @@ export default function MachinesPage() {
             disabled={busy}
             onClick={() => void remove(m)}
           >
-            Delete
+            Hand back
           </button>
         </div>
       </div>
@@ -285,8 +296,9 @@ export default function MachinesPage() {
           <h2>Retired</h2>
           <div className="card">
             <p className="muted small">
-              Retired machines are hidden from dropdowns; their history stays.
-              Delete only works on machines with no logged hours.
+              Retired machines are hidden from the dropdowns; their history
+              stays. Retiring affects the whole company, not just your crew —
+              hand a machine back instead if another crew still runs it.
             </p>
             {retired.map((m) => row(m, true))}
           </div>
