@@ -24,6 +24,7 @@ export const MACHINE_TYPES: MachineType[] = [
   { key: "loader", label: "Loader" },
   { key: "skid_steer", label: "Skid Steer" },
   { key: "dozer", label: "Dozer" },
+  { key: "motor_grader", label: "Motor Grader" },
   { key: "haul_truck", label: "Haul Truck" },
   { key: "bomag", label: "Bomag" },
   {
