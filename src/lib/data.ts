@@ -7,6 +7,7 @@ import {
   Inspection,
   InspectionWithNames,
   Machine,
+  MachineDetails,
   NewEntry,
   NewInspection,
   ShareLink,
@@ -49,10 +50,32 @@ export async function listMachines(activeOnly = false): Promise<Machine[]> {
   return data as Machine[];
 }
 
-export async function addMachine(name: string): Promise<void> {
+export async function addMachine(
+  name: string,
+  details?: Partial<MachineDetails>
+): Promise<void> {
+  // Only name the identity columns when there's something to put in
+  // them, so adding a machine still works against a database that
+  // hasn't had the identity migration applied yet.
+  const identity = Object.fromEntries(
+    Object.entries(details ?? {}).filter(([, value]) => value)
+  );
   const { error } = await getSupabase()
     .from("machines")
-    .insert({ name, foreman_id: requireCrewId() });
+    .insert({ name, ...identity, foreman_id: requireCrewId() });
+  if (error) throw error;
+}
+
+/** Set the unit number, make/model and type on an existing machine. */
+export async function setMachineDetails(
+  id: string,
+  details: MachineDetails
+): Promise<void> {
+  const { error } = await getSupabase()
+    .from("machines")
+    .update(details)
+    .eq("foreman_id", requireCrewId())
+    .eq("id", id);
   if (error) throw error;
 }
 
