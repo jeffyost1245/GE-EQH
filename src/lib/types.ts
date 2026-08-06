@@ -2,20 +2,23 @@ export type Status = "active" | "inactive";
 
 export interface Machine {
   id: string;
+  /**
+   * The make and model — "John Deere 624R". Called `name` because that
+   * is the column every other screen already reads; the machines screen
+   * labels it honestly.
+   */
   name: string;
   status: Status;
   created_at: string;
   /** The company's three-character identifier, e.g. 925 or 871R. */
   unit_no?: string | null;
-  make_model?: string | null;
   /** A key from MACHINE_TYPES. */
   machine_type?: string | null;
 }
 
-/** The identity fields, edited together on the machines screen. */
+/** What identifies a machine, edited alongside its make and model. */
 export interface MachineDetails {
   unit_no: string | null;
-  make_model: string | null;
   machine_type: string | null;
 }
 

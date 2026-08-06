@@ -32,7 +32,6 @@ export default function MachinesPage() {
   const [editId, setEditId] = useState("");
   const [editName, setEditName] = useState("");
   const [editUnit, setEditUnit] = useState("");
-  const [editModel, setEditModel] = useState("");
   const [editType, setEditType] = useState("");
 
   const refresh = useCallback(async () => {
@@ -52,7 +51,6 @@ export default function MachinesPage() {
     setEditId(NEW);
     setEditName("");
     setEditUnit("");
-    setEditModel("");
     setEditType("");
     setError("");
     setInfo("");
@@ -62,7 +60,6 @@ export default function MachinesPage() {
     setEditId(m.id);
     setEditName(m.name);
     setEditUnit(m.unit_no ?? "");
-    setEditModel(m.make_model ?? "");
     setEditType(m.machine_type ?? "");
     setError("");
     setInfo("");
@@ -73,7 +70,6 @@ export default function MachinesPage() {
     if (!trimmed) return;
     const details = {
       unit_no: editUnit.trim() ? normalizeUnit(editUnit) : null,
-      make_model: editModel.trim() || null,
       machine_type: editType || null,
     };
 
@@ -163,21 +159,13 @@ export default function MachinesPage() {
           sometimes with a letter, like 741 or 871R.
         </p>
 
-        <label htmlFor="e-name">Name</label>
+        <label htmlFor="e-name">Make and model</label>
         <input
           id="e-name"
           type="text"
+          placeholder="John Deere 624R"
           value={editName}
           onChange={(e) => setEditName(e.target.value)}
-        />
-
-        <label htmlFor="e-model">Make and model</label>
-        <input
-          id="e-model"
-          type="text"
-          placeholder="John Deere 510"
-          value={editModel}
-          onChange={(e) => setEditModel(e.target.value)}
         />
 
         <label htmlFor="e-type">Type</label>
@@ -232,12 +220,8 @@ export default function MachinesPage() {
             {m.unit_no && <span className="unit-no">{m.unit_no}</span>}
             <span className="stat-name">{m.name}</span>
           </span>
-          {(m.machine_type || m.make_model) && (
-            <span className="machine-sub">
-              {[typeLabel(m.machine_type ?? null), m.make_model]
-                .filter(Boolean)
-                .join(" · ")}
-            </span>
+          {m.machine_type && (
+            <span className="machine-sub">{typeLabel(m.machine_type)}</span>
           )}
         </span>
         <div className="row-actions">
