@@ -9,6 +9,7 @@ import Link from "next/link";
 import AppShell from "@/components/AppShell";
 import SheetThumbnail from "@/components/SheetThumbnail";
 import { listInspections } from "@/lib/data";
+import { machineLabel } from "@/lib/machineTypes";
 import { flagBadgeText, flaggedItems } from "@/lib/inspection";
 import { InspectionWithNames } from "@/lib/types";
 import { formatDate, todayString } from "@/lib/week";
@@ -69,7 +70,7 @@ export default function InspectionsPage() {
                 >
                   <SheetThumbnail items={sheet.items ?? {}} />
                   <span className="sheet-caption">
-                    {sheet.machines?.name ?? "Machine"}
+                    {sheet.machines ? machineLabel(sheet.machines) : "Machine"}
                     <br />
                     <span className="muted">{sheet.crew?.name ?? ""}</span>
                     <span

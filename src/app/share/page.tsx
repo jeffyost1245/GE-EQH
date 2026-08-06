@@ -9,6 +9,7 @@ import { useSearchParams } from "next/navigation";
 import SheetPdfButton from "@/components/SheetPdfButton";
 import SheetPaper from "@/components/SheetPaper";
 import { entriesForWeek, getShareLink, inspectionsForWeek } from "@/lib/data";
+import { machineLabel } from "@/lib/machineTypes";
 import { flaggedItems } from "@/lib/inspection";
 import { sheetPhotoUrls } from "@/lib/photo";
 import { EntryWithNames, InspectionWithNames } from "@/lib/types";
@@ -118,7 +119,7 @@ function SharedSheets() {
             return (
               <div className="card" key={sheet.id}>
                 <div className="entry-top">
-                  <span>{sheet.machines?.name ?? "Machine"}</span>
+                  <span>{sheet.machines ? machineLabel(sheet.machines) : "Machine"}</span>
                   <span className="muted small">{formatDate(sheet.date)}</span>
                 </div>
                 <div className="entry-sub">
@@ -135,7 +136,7 @@ function SharedSheets() {
                 <SheetPaper
                   sheet={sheet}
                   context={{
-                    machineName: sheet.machines?.name ?? "Machine",
+                    machineName: sheet.machines ? machineLabel(sheet.machines) : "Machine",
                     operatorName: sheet.crew?.name ?? "",
                     crewName: sheet.foremen?.name ?? "",
                   }}
@@ -155,7 +156,7 @@ function SharedSheets() {
             return (
               <div className="card" key={e.id}>
                 <div className="entry-top">
-                  <span>{e.machines?.name ?? "Unknown machine"}</span>
+                  <span>{e.machines ? machineLabel(e.machines) : "Unknown machine"}</span>
                   <span className="muted small">{e.crew?.name ?? ""}</span>
                 </div>
                 {e.job_tag && <div className="entry-sub">{e.job_tag}</div>}

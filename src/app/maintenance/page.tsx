@@ -19,6 +19,7 @@ import {
   setRepairDone,
 } from "@/lib/data";
 import { flaggedItems } from "@/lib/inspection";
+import { machineLabel } from "@/lib/machineTypes";
 import { EntryWithNames, InspectionWithNames } from "@/lib/types";
 import { formatDate } from "@/lib/week";
 
@@ -42,7 +43,7 @@ function fromEntry(e: EntryWithNames): RepairItem {
   return {
     id: e.id,
     source: "entry",
-    machine: e.machines?.name ?? "Unknown machine",
+    machine: e.machines ? machineLabel(e.machines) : "Unknown machine",
     crewName: e.foremen?.name ?? "Unknown crew",
     operator: e.crew?.name ?? "Unknown",
     date: e.date,
@@ -57,7 +58,7 @@ function fromInspection(s: InspectionWithNames): RepairItem {
   return {
     id: s.id,
     source: "sheet",
-    machine: s.machines?.name ?? "Unknown machine",
+    machine: s.machines ? machineLabel(s.machines) : "Unknown machine",
     crewName: s.foremen?.name ?? "Unknown crew",
     operator: s.crew?.name ?? "Unknown",
     date: s.date,

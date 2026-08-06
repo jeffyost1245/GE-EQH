@@ -11,6 +11,7 @@ import AppShell from "@/components/AppShell";
 import SheetPdfButton from "@/components/SheetPdfButton";
 import SheetPaper from "@/components/SheetPaper";
 import { deleteInspection, getInspection } from "@/lib/data";
+import { machineLabel } from "@/lib/machineTypes";
 import { flaggedItems } from "@/lib/inspection";
 import { currentCrew } from "@/lib/tenant";
 import { InspectionWithNames } from "@/lib/types";
@@ -81,7 +82,7 @@ function Record() {
     <>
       <div className="card">
         <div className="entry-top">
-          <span>{sheet.machines?.name ?? "Machine"}</span>
+          <span>{sheet.machines ? machineLabel(sheet.machines) : "Machine"}</span>
           <span className="muted small">{formatDate(sheet.date)}</span>
         </div>
         <div className="entry-sub">
@@ -100,7 +101,7 @@ function Record() {
         <SheetPaper
           sheet={sheet}
           context={{
-            machineName: sheet.machines?.name ?? "Machine",
+            machineName: sheet.machines ? machineLabel(sheet.machines) : "Machine",
             operatorName: sheet.crew?.name ?? "",
             crewName: sheet.foremen?.name ?? currentCrew()?.name ?? "",
           }}

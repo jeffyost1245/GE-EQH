@@ -17,11 +17,11 @@ import { dequeue, enqueue, newLocalId, pendingOps } from "./queue";
 import { requireCrewId } from "./tenant";
 
 const ENTRY_COLUMNS =
-  "*, machines(name), crew(name)";
+  "*, machines(name, unit_no), crew(name)";
 
 /** Cross-crew reads also carry the crew name, for labelling. */
 const ENTRY_COLUMNS_WITH_CREW =
-  "*, machines(name), crew(name), foremen(name)";
+  "*, machines(name, unit_no), crew(name), foremen(name)";
 
 // ---------- foremen ----------
 
@@ -435,8 +435,8 @@ export async function getShareLink(token: string): Promise<ShareLink | null> {
 
 // ---------- checkout sheets (inspections) ----------
 
-const INSPECTION_COLUMNS = "*, machines(name), crew(name)";
-const INSPECTION_COLUMNS_WITH_CREW = "*, machines(name), crew(name), foremen(name)";
+const INSPECTION_COLUMNS = "*, machines(name, unit_no), crew(name)";
+const INSPECTION_COLUMNS_WITH_CREW = "*, machines(name, unit_no), crew(name), foremen(name)";
 
 /**
  * Save a sheet. Upserts on machine and date because the paper works that

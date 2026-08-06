@@ -9,6 +9,7 @@ import CrewBar from "@/components/CrewBar";
 import SheetPdfButton from "@/components/SheetPdfButton";
 import SheetPaper from "@/components/SheetPaper";
 import { allInspections, allSheets } from "@/lib/data";
+import { machineLabel } from "@/lib/machineTypes";
 import { flaggedItems } from "@/lib/inspection";
 import { sheetPhotoUrls } from "@/lib/photo";
 import { EntryWithNames, InspectionWithNames } from "@/lib/types";
@@ -85,7 +86,7 @@ export default function SheetsPage() {
         return (
           <div className="card" key={s.id}>
             <div className="entry-top">
-              <span>{s.machines?.name ?? "Unknown machine"}</span>
+              <span>{s.machines ? machineLabel(s.machines) : "Unknown machine"}</span>
               <span className="muted small">{formatDate(s.date)}</span>
             </div>
             <div className="entry-sub">
@@ -102,7 +103,7 @@ export default function SheetsPage() {
             <SheetPaper
               sheet={s}
               context={{
-                machineName: s.machines?.name ?? "Machine",
+                machineName: s.machines ? machineLabel(s.machines) : "Machine",
                 operatorName: s.crew?.name ?? "",
                 crewName: s.foremen?.name ?? "",
               }}
@@ -119,7 +120,7 @@ export default function SheetsPage() {
         return (
           <div className="card" key={s.id} style={{ marginTop: 12 }}>
             <div className="entry-top">
-              <span>{s.machines?.name ?? "Unknown machine"}</span>
+              <span>{s.machines ? machineLabel(s.machines) : "Unknown machine"}</span>
               <span className="muted small">{formatDate(s.date)}</span>
             </div>
             <div className="entry-sub">
