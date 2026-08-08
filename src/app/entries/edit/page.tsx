@@ -6,17 +6,23 @@
 // dynamic route so it deploys reliably.
 
 import { Suspense, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import AppShell from "@/components/AppShell";
-import SheetPhotoField from "@/components/SheetPhotoField";
 import {
   getEntry,
+  inspectionForDay,
   listCrew,
   listMachines,
   saveEntryUpdate,
-  setEntryPhoto,
 } from "@/lib/data";
-import { CrewMember, EntryWithNames, Machine } from "@/lib/types";
+import { machineLabel } from "@/lib/machineTypes";
+import {
+  CrewMember,
+  EntryWithNames,
+  InspectionWithNames,
+  Machine,
+} from "@/lib/types";
 
 function EditEntry() {
   const searchParams = useSearchParams();
@@ -37,6 +43,9 @@ function EditEntry() {
   const [jobTag, setJobTag] = useState("");
   const [photoPath, setPhotoPath] = useState<string | null>(null);
   const [needsRepair, setNeedsRepair] = useState(false);
+
+  /** The checkout sheet for this entry's machine and day, if there is one. */
+  const [sheet, setSheet] = useState<InspectionWithNames | null>(null);
 
   const [busy, setBusy] = useState(false);
   const [saveError, setSaveError] = useState("");
@@ -76,6 +85,22 @@ function EditEntry() {
       }
     })();
   }, [id]);
+
+  // Follows the machine and date being edited, not the entry as loaded —
+  // change either and the sheet shown should be the one that now applies.
+  useEffect(() => {
+    let cancelled = false;
+    setSheet(null);
+    if (!machineId || !date) return;
+    inspectionForDay(machineId, date)
+      .then((found) => {
+        if (!cancelled) setSheet(found);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [machineId, date]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -135,7 +160,7 @@ function EditEntry() {
           >
             {machines.map((m) => (
               <option key={m.id} value={m.id}>
-                {m.name}
+                {machineLabel(m)}
                 {m.status === "inactive" ? " (retired)" : ""}
               </option>
             ))}
@@ -199,15 +224,54 @@ function EditEntry() {
             onChange={(e) => setNote(e.target.value)}
           />
 
-          <SheetPhotoField
-            value={photoPath}
-            onChange={(path) => {
-              setPhotoPath(path);
-              // Persist right away so a photo added here isn't lost if the
-              // form is closed without saving; Save Changes also sends it.
-              void setEntryPhoto(id, path).catch(() => {});
-            }}
-          />
+          <div className="sheet-choice">
+            <label>Checkout sheet</label>
+            {sheet ? (
+              <>
+                <p className="sheet-done">
+                  ✓ Done by <strong>{sheet.crew?.name ?? "someone"}</strong>
+                  {sheet.signed_at &&
+                    ` at ${new Date(sheet.signed_at).toLocaleTimeString(
+                      undefined,
+                      { hour: "numeric", minute: "2-digit" }
+                    )}`}
+                  .
+                </p>
+                <div className="row">
+                  <Link
+                    className="btn btn-small btn-secondary"
+                    href={`/inspections/view?id=${sheet.id}`}
+                  >
+                    See it
+                  </Link>
+                  <Link
+                    className="btn btn-small btn-secondary"
+                    href={`/inspect?machine=${machineId}&date=${date}`}
+                  >
+                    Something changed
+                  </Link>
+                </div>
+              </>
+            ) : (
+              <>
+                <Link
+                  className="btn btn-small btn-secondary"
+                  href={`/inspect?machine=${machineId}&date=${date}`}
+                >
+                  📋 Fill one out
+                </Link>
+                <p className="small muted">
+                  No sheet for this machine on this day yet.
+                </p>
+              </>
+            )}
+            {photoPath && (
+              <p className="small muted">
+                A photographed sheet is attached to this entry. It still shows
+                on the dashboard and to the safety officer.
+              </p>
+            )}
+          </div>
 
           <label className="check">
             <input

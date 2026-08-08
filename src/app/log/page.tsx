@@ -4,7 +4,6 @@ import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import AppShell from "@/components/AppShell";
-import SheetPhotoField from "@/components/SheetPhotoField";
 import {
   inspectionForDay,
   latestEntryForMachine,
@@ -46,7 +45,6 @@ function LogForm() {
   const [endHours, setEndHours] = useState("");
   const [note, setNote] = useState("");
   const [jobTag, setJobTag] = useState("");
-  const [photoPath, setPhotoPath] = useState<string | null>(null);
   const [needsRepair, setNeedsRepair] = useState(false);
 
   const [prevEntry, setPrevEntry] = useState<EntryWithNames | null>(null);
@@ -101,7 +99,6 @@ function LogForm() {
     setEndHours(draft.endHours);
     setNote(draft.note);
     setJobTag(draft.jobTag);
-    setPhotoPath(draft.photoPath);
     setNeedsRepair(draft.needsRepair);
   }, [resuming]);
 
@@ -135,7 +132,6 @@ function LogForm() {
       endHours,
       note,
       jobTag,
-      photoPath,
       needsRepair,
     });
   }
@@ -192,7 +188,6 @@ function LogForm() {
       end_hours: end,
       note: note.trim() || null,
       job_tag: jobTag.trim() || null,
-      photo_path: photoPath,
       needs_repair: needsRepair,
     });
     setBusy(false);
@@ -204,7 +199,6 @@ function LogForm() {
     setEndHours("");
     setNote("");
     setJobTag("");
-    setPhotoPath(null);
     setNeedsRepair(false);
     setPrevEntry(null);
     setPrevFromCache(false);
@@ -388,13 +382,11 @@ function LogForm() {
               <p className="small muted">
                 {machineId && sheetChecked
                   ? "Nobody has done this machine today. What you've typed here is kept while you fill it out."
-                  : "Or photograph the paper one — either works, and anything marked RR goes on the shop list the same way."}
+                  : "Anything marked RR goes on the shop list, and the safety officer gets the sheet as a PDF."}
               </p>
             </>
           )}
         </div>
-
-        <SheetPhotoField value={photoPath} onChange={setPhotoPath} />
 
         <label className="check">
           <input
