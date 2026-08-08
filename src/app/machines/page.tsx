@@ -84,13 +84,24 @@ export default function MachinesPage() {
           await attachMachine(existing.id);
           setEditId("");
           setInfo(
-            `${existing.unit_no} is already in the company fleet as "${existing.name}" — added it to your list rather than creating a second one. Its hours carry over.`
+            `${existing.unit_no} is already in the company fleet as "${existing.name}" — added it to your list rather than creating a second one. Its hours carry over. If this is a different machine that inherited the number, retire the old one first.`
           );
           await refresh();
           return;
         }
         await addMachine(trimmed, details);
       } else {
+        // Editing is the other way a duplicate gets made: a machine added
+        // blank, or renumbered later, never went through the lookup that
+        // adding does. Two records for one machine means two hour meters.
+        const clash = unit ? await findMachineByUnit(unit, editId) : null;
+        if (clash) {
+          setError(
+            `${unit} is currently ${clash.name}. Two machines in service can't share a number — if this is that machine, hand this one back and add ${unit} instead. If it took the number over, retire ${clash.name} first.`
+          );
+          setBusy(false);
+          return;
+        }
         const machine = (machines ?? []).find((m) => m.id === editId);
         if (machine && trimmed !== machine.name) {
           await renameMachine(editId, trimmed);

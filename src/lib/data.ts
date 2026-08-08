@@ -65,17 +65,27 @@ function machineSortKey(machine: Machine): string {
 }
 
 /**
- * Find a machine anywhere in the company by its unit number. This is what
- * stops a second 311R being created when a crew is handed the first one.
+ * Find the machine currently carrying a unit number. This is what stops a
+ * second 311R being created when a crew is handed the first one.
+ *
+ * Active machines only, and that is the important part: the company
+ * turns iron over, and a new machine can be given a retired one's
+ * number. Matching a retired machine would attach the new machine's
+ * hours to the old machine's history — worse than the duplicate this is
+ * meant to prevent. Retiring a machine is what frees its number.
  */
 export async function findMachineByUnit(
-  unit: string
+  unit: string,
+  /** Ignore this machine — used when checking an edit against the rest. */
+  exceptId?: string
 ): Promise<Machine | null> {
-  const { data, error } = await getSupabase()
+  let q = getSupabase()
     .from("machines")
     .select("*")
-    .ilike("unit_no", unit.trim())
-    .limit(1);
+    .eq("status", "active")
+    .ilike("unit_no", unit.trim());
+  if (exceptId) q = q.neq("id", exceptId);
+  const { data, error } = await q.limit(1);
   if (error) throw error;
   return (data?.[0] as Machine) ?? null;
 }
