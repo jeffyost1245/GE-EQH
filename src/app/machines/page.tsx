@@ -91,6 +91,17 @@ export default function MachinesPage() {
         }
         await addMachine(trimmed, details);
       } else {
+        // Editing is the other way a duplicate gets made: a machine added
+        // blank, or renumbered later, never went through the lookup that
+        // adding does. Two records for one machine means two hour meters.
+        const clash = unit ? await findMachineByUnit(unit, editId) : null;
+        if (clash) {
+          setError(
+            `${unit} is already ${clash.name} in the company fleet. Two machines can't share a unit number — if this is that machine, hand this one back and add ${unit} to your list instead.`
+          );
+          setBusy(false);
+          return;
+        }
         const machine = (machines ?? []).find((m) => m.id === editId);
         if (machine && trimmed !== machine.name) {
           await renameMachine(editId, trimmed);

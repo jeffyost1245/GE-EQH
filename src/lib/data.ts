@@ -69,13 +69,13 @@ function machineSortKey(machine: Machine): string {
  * stops a second 311R being created when a crew is handed the first one.
  */
 export async function findMachineByUnit(
-  unit: string
+  unit: string,
+  /** Ignore this machine — used when checking an edit against the rest. */
+  exceptId?: string
 ): Promise<Machine | null> {
-  const { data, error } = await getSupabase()
-    .from("machines")
-    .select("*")
-    .ilike("unit_no", unit.trim())
-    .limit(1);
+  let q = getSupabase().from("machines").select("*").ilike("unit_no", unit.trim());
+  if (exceptId) q = q.neq("id", exceptId);
+  const { data, error } = await q.limit(1);
   if (error) throw error;
   return (data?.[0] as Machine) ?? null;
 }
