@@ -84,7 +84,7 @@ export default function MachinesPage() {
           await attachMachine(existing.id);
           setEditId("");
           setInfo(
-            `${existing.unit_no} is already in the company fleet as "${existing.name}" — added it to your list rather than creating a second one. Its hours carry over.`
+            `${existing.unit_no} is already in the company fleet as "${existing.name}" — added it to your list rather than creating a second one. Its hours carry over. If this is a different machine that inherited the number, retire the old one first.`
           );
           await refresh();
           return;
@@ -97,7 +97,7 @@ export default function MachinesPage() {
         const clash = unit ? await findMachineByUnit(unit, editId) : null;
         if (clash) {
           setError(
-            `${unit} is already ${clash.name} in the company fleet. Two machines can't share a unit number — if this is that machine, hand this one back and add ${unit} to your list instead.`
+            `${unit} is currently ${clash.name}. Two machines in service can't share a number — if this is that machine, hand this one back and add ${unit} instead. If it took the number over, retire ${clash.name} first.`
           );
           setBusy(false);
           return;
