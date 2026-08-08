@@ -1,9 +1,13 @@
 // Checkout sheet photos.
 //
-// Phone cameras produce 3-5 MB images. A safety sheet only needs to be
-// legible, so photos are resized and re-encoded before upload — roughly
-// 300 KB each, which keeps years of sheets inside the storage allowance
-// and makes uploads survive weak site signal.
+// Nothing uploads any more: the safety officer took the digital sheet, so
+// crews fill the form instead of photographing the paper. What stays is
+// everything needed to keep showing the photos already taken — those are
+// safety records and don't stop existing because the way in changed.
+//
+// The upload path is kept rather than deleted. Phone cameras produce 3-5
+// MB images, and the resizing here is the part that took the fiddling; if
+// photographs are ever wanted again it should not have to be rediscovered.
 
 import { getSupabase } from "./supabase";
 

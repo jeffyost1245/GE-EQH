@@ -5,7 +5,8 @@ import Link from "next/link";
 import AppShell from "@/components/AppShell";
 import CrewBar from "@/components/CrewBar";
 import WeeklySheets from "@/components/WeeklySheets";
-import { entriesForWeek } from "@/lib/data";
+import { entriesForWeek, inspectionsForWeek } from "@/lib/data";
+import { flaggedItems } from "@/lib/inspection";
 import { machineLabel } from "@/lib/machineTypes";
 import {
   formatDayHeading,
@@ -13,7 +14,7 @@ import {
   weekLabel,
   weekRange,
 } from "@/lib/week";
-import { EntryWithNames } from "@/lib/types";
+import { EntryWithNames, InspectionWithNames } from "@/lib/types";
 
 /** One person's stint on a machine that day. */
 interface Stint {
@@ -32,11 +33,29 @@ interface MachineDay {
   /** Hour meter at the first start and the last finish of the day. */
   meterStart: number | null;
   meterEnd: number | null;
+  /** The day's checkout sheet for this machine, if one was filled in. */
+  sheetId: string | null;
+  sheetFlagged: boolean;
   stints: Stint[];
 }
 
+/** Keyed by machine and day, which is how a sheet is filed. */
+function sheetIndex(
+  sheets: InspectionWithNames[]
+): Map<string, { id: string; flagged: boolean }> {
+  const index = new Map<string, { id: string; flagged: boolean }>();
+  for (const sheet of sheets) {
+    index.set(`${sheet.machine_id}|${sheet.date}`, {
+      id: sheet.id,
+      flagged: flaggedItems(sheet.items ?? {}).length > 0,
+    });
+  }
+  return index;
+}
+
 function groupByDayAndMachine(
-  entries: EntryWithNames[]
+  entries: EntryWithNames[],
+  sheets: Map<string, { id: string; flagged: boolean }>
 ): [string, MachineDay[]][] {
   const days = new Map<string, Map<string, MachineDay>>();
 
@@ -49,6 +68,8 @@ function groupByDayAndMachine(
       open: 0,
       meterStart: null,
       meterEnd: null,
+      sheetId: sheets.get(`${e.machine_id}|${e.date}`)?.id ?? null,
+      sheetFlagged: sheets.get(`${e.machine_id}|${e.date}`)?.flagged ?? false,
       stints: [],
     };
 
@@ -91,6 +112,7 @@ function groupByDayAndMachine(
 export default function Dashboard() {
   const [offset, setOffset] = useState(0);
   const [entries, setEntries] = useState<EntryWithNames[] | null>(null);
+  const [sheets, setSheets] = useState<InspectionWithNames[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -100,6 +122,13 @@ export default function Dashboard() {
     let cancelled = false;
     setLoading(true);
     setError("");
+    // The sheets are a side question: if they fail the hours still show.
+    inspectionsForWeek(week.start, week.end)
+      .then((rows) => {
+        if (!cancelled) setSheets(rows);
+      })
+      .catch(() => undefined);
+
     entriesForWeek(week.start, week.end)
       .then((rows) => {
         if (!cancelled) setEntries(rows);
@@ -119,8 +148,8 @@ export default function Dashboard() {
   }, [week.start, week.end]);
 
   const days = useMemo(
-    () => (entries ? groupByDayAndMachine(entries) : []),
-    [entries]
+    () => (entries ? groupByDayAndMachine(entries, sheetIndex(sheets)) : []),
+    [entries, sheets]
   );
 
   const weekTotal = useMemo(
@@ -201,7 +230,19 @@ export default function Dashboard() {
             <div className="machine-day" key={m.machineId}>
               <div className="machine-day-top">
                 <div>
-                  <div className="machine-day-name">{m.machine}</div>
+                  <div className="machine-day-name">
+                    {m.machine}
+                    {m.sheetId ? (
+                      <Link
+                        className={`sheet-tick${m.sheetFlagged ? " flagged" : ""}`}
+                        href={`/inspections/view?id=${m.sheetId}`}
+                      >
+                        {m.sheetFlagged ? "✓ sheet · repair" : "✓ sheet"}
+                      </Link>
+                    ) : (
+                      <span className="sheet-tick missing">no sheet</span>
+                    )}
+                  </div>
                   {m.meterStart != null && (
                     <div className="machine-day-meter">
                       {formatHours(m.meterStart)} →{" "}

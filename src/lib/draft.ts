@@ -19,7 +19,6 @@ export interface LogDraft {
   endHours: string;
   note: string;
   jobTag: string;
-  photoPath: string | null;
   needsRepair: boolean;
 }
 
