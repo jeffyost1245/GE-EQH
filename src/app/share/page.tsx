@@ -6,6 +6,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import SheetBookButton from "@/components/SheetBookButton";
 import SheetPdfButton from "@/components/SheetPdfButton";
 import SheetPaper from "@/components/SheetPaper";
 import { entriesForWeek, getShareLink, inspectionsForWeek } from "@/lib/data";
@@ -109,10 +110,25 @@ function SharedSheets() {
       )}
 
       {state.filled.length > 0 && (
+        <div className="card">
+          <SheetBookButton
+            sheets={state.filled}
+            weekStart={state.weekStart}
+            weekEnd={state.weekEnd}
+            className="btn"
+          />
+          <p className="muted small" style={{ margin: "8px 0 0" }}>
+            One file, in date order, with a contents page listing every
+            machine and which ones came back needing repairs.
+          </p>
+        </div>
+      )}
+
+      {state.filled.length > 0 && (
         <>
           <h2>Inspections</h2>
           <p className="muted small">
-            Tap Send PDF to save one to your files or print it.
+            Or take them one at a time — tap Send PDF on any sheet below.
           </p>
           {state.filled.map((sheet) => {
             const flagged = flaggedItems(sheet.items);

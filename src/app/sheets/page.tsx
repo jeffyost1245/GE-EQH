@@ -6,6 +6,7 @@
 import { useEffect, useMemo, useState } from "react";
 import AppShell from "@/components/AppShell";
 import CrewBar from "@/components/CrewBar";
+import SheetBookButton from "@/components/SheetBookButton";
 import SheetPdfButton from "@/components/SheetPdfButton";
 import SheetPaper from "@/components/SheetPaper";
 import { allInspections, allSheets } from "@/lib/data";
@@ -80,7 +81,19 @@ export default function SheetsPage() {
         </p>
       )}
 
-      {visibleDigital.length > 0 && <h2>Filled out in the app</h2>}
+      {visibleDigital.length > 0 && (
+        <>
+          <h2>Filled out in the app</h2>
+          <div className="card">
+            <SheetBookButton sheets={visibleDigital} className="btn" />
+            <p className="muted small" style={{ margin: "8px 0 0" }}>
+              {crew === "all"
+                ? "Every sheet shown here, bound into one file with a contents page."
+                : `${crew}'s sheets, bound into one file with a contents page.`}
+            </p>
+          </div>
+        </>
+      )}
       {visibleDigital.map((s) => {
         const flagged = flaggedItems(s.items);
         return (
