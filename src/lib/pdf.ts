@@ -2,9 +2,10 @@
 //
 // Why not a library: the crews fill these out in dead zones, so the whole
 // app has to work from cache, and a PDF generator is a third of a megabyte
-// to carry around for one page of lines and text. Everything here uses the
+// to carry around for pages of lines and text. Everything here uses the
 // two fonts every PDF reader already has (Helvetica, Helvetica-Bold), so
-// nothing is embedded and a finished sheet lands around 6 KB.
+// nothing is embedded and a finished sheet lands around 6 KB — a whole
+// week of them, bound into one file, is still under 200 KB.
 //
 // Coordinates are given top-left, in points (72 per inch), and flipped on
 // the way out — laying out a form upside down is a good way to make
@@ -116,11 +117,23 @@ function fixed(n: number): string {
 
 export class Pdf {
   private ops = "";
+  /** Finished pages. The one being drawn is still in `ops`. */
+  private banked: string[] = [];
 
   constructor(
     readonly width = 612, // US Letter, portrait
     readonly height = 792
   ) {}
+
+  /**
+   * Finish the current page and start a fresh one. Drawing keeps using
+   * the same top-left coordinates, so a page of a book is laid out
+   * exactly like a sheet on its own.
+   */
+  newPage(): void {
+    this.banked.push(this.ops);
+    this.ops = "";
+  }
 
   /** Flip a top-left y into PDF's bottom-left space. */
   private y(top: number): number {
@@ -216,13 +229,32 @@ export class Pdf {
 
   /** Assemble the file. Offsets are counted in bytes, not characters. */
   private serialize(): Uint8Array {
-    const stream = this.ops;
+    const streams = [...this.banked, this.ops];
+    const n = streams.length;
+
+    // Object numbers are positional: 1 catalog, 2 page tree, then one
+    // page object per page, then one content stream per page, then the
+    // three fonts every page shares.
+    const pageObj = (i: number) => 3 + i;
+    const contentObj = (i: number) => 3 + n + i;
+    const fontObj = 3 + n * 2;
+
     const objects = [
       "<< /Type /Catalog /Pages 2 0 R >>",
-      "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${this.width} ${this.height}] ` +
-        "/Resources << /Font << /F1 5 0 R /FB 6 0 R /FI 7 0 R >> >> /Contents 4 0 R >>",
-      `<< /Length ${new TextEncoder().encode(stream).length} >>\nstream\n${stream}endstream`,
+      `<< /Type /Pages /Kids [${streams
+        .map((_, i) => `${pageObj(i)} 0 R`)
+        .join(" ")}] /Count ${n} >>`,
+      ...streams.map(
+        (_, i) =>
+          `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${this.width} ${this.height}] ` +
+          `/Resources << /Font << /F1 ${fontObj} 0 R /FB ${fontObj + 1} 0 R ` +
+          `/FI ${fontObj + 2} 0 R >> >> /Contents ${contentObj(i)} 0 R >>`
+      ),
+      ...streams.map(
+        (stream) =>
+          `<< /Length ${new TextEncoder().encode(stream).length} >>\n` +
+          `stream\n${stream}endstream`
+      ),
       "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
       "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>",
       "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-BoldOblique /Encoding /WinAnsiEncoding >>",

@@ -19,6 +19,7 @@ import {
 import { flagBadgeText, flaggedItems } from "@/lib/inspection";
 import { machineLabel } from "@/lib/machineTypes";
 import { sheetPhotoUrls } from "@/lib/photo";
+import SheetBookButton from "./SheetBookButton";
 import SheetThumbnail from "./SheetThumbnail";
 import { EntryWithNames, InspectionItems, InspectionWithNames } from "@/lib/types";
 import { formatDate } from "@/lib/week";
@@ -117,6 +118,10 @@ export default function WeeklySheets({
   }, [filled, withPhotos, removed]);
 
   const total = byDay.reduce((n, [, cards]) => n + cards.length, 0);
+
+  // Only the filled-out sheets can be bound; a photographed one is an
+  // image, and a deleted one shouldn't come back in the file.
+  const bindable = filled.filter((s) => !removed.has(`sheet-${s.id}`));
 
   async function remove(card: Card) {
     const label =
@@ -265,6 +270,11 @@ export default function WeeklySheets({
 
         {total > 0 && (
           <>
+            <SheetBookButton
+              sheets={bindable}
+              weekStart={weekStart}
+              weekEnd={weekEnd}
+            />
             <button
               className="btn btn-secondary"
               disabled={sharing}
