@@ -426,18 +426,6 @@ export async function syncPending(): Promise<number> {
   return synced;
 }
 
-export async function listEntries(limit = 100): Promise<EntryWithNames[]> {
-  const { data, error } = await getSupabase()
-    .from("entries")
-    .select(ENTRY_COLUMNS)
-    .eq("foreman_id", requireCrewId())
-    .order("date", { ascending: false })
-    .order("created_at", { ascending: false })
-    .limit(limit);
-  if (error) throw error;
-  return data as EntryWithNames[];
-}
-
 export async function getEntry(id: string): Promise<EntryWithNames | null> {
   const { data, error } = await getSupabase()
     .from("entries")
