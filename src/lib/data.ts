@@ -127,14 +127,21 @@ export async function crewsHolding(machineId: string): Promise<string[]> {
 }
 
 /**
- * Put a machine the company has never seen into the fleet, and onto the
- * adding crew's list. foreman_id records who entered it, not who owns
- * it — the crew_machines row is what makes it show up in their dropdown.
+ * Put a machine the company has never seen into the fleet. foreman_id
+ * records who entered it, not who owns it — the crew_machines row is
+ * what makes it show up in a crew's dropdown.
+ *
+ * `attach` is what separates the two ways a machine arrives. A foreman
+ * adding one is adding it to his list, so it attaches. The
+ * superintendent entering new iron is stocking the yard: it belongs to
+ * the company and to nobody's list yet, and reads as unassigned on the
+ * fleet board until a crew picks it up.
  */
 export async function addMachine(
   name: string,
-  details?: Partial<MachineDetails>
-): Promise<void> {
+  details?: Partial<MachineDetails>,
+  { attach = true }: { attach?: boolean } = {}
+): Promise<string | null> {
   const identity = Object.fromEntries(
     Object.entries(details ?? {}).filter(([, value]) => value)
   );
@@ -145,8 +152,23 @@ export async function addMachine(
     .limit(1);
   if (error) throw error;
 
-  const created = (data?.[0] as { id: string } | undefined)?.id;
-  if (created) await attachMachine(created);
+  const created = (data?.[0] as { id: string } | undefined)?.id ?? null;
+  if (created && attach) await attachMachine(created);
+  return created;
+}
+
+/**
+ * Company machines this crew doesn't hold yet, for picking one off the
+ * fleet instead of typing it in again. The machine is already there with
+ * its number, make and hours; a crew taking it on should be choosing it,
+ * not re-describing it.
+ */
+export async function machinesNotHeld(): Promise<Machine[]> {
+  const [fleet, mine] = await Promise.all([allMachines(), listMachines(true)]);
+  const held = new Set(mine.map((m) => m.id));
+  return fleet
+    .filter((m) => m.status === "active" && !held.has(m.id))
+    .sort((a, b) => machineSortKey(a).localeCompare(machineSortKey(b)));
 }
 
 /** Set the unit number, make/model and type on an existing machine. */
