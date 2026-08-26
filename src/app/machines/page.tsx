@@ -10,6 +10,7 @@ import {
   detachMachine,
   findMachineByUnit,
   listMachines,
+  machinesNotHeld,
   renameMachine,
   setMachineDetails,
   setMachineStatus,
@@ -36,6 +37,16 @@ export default function MachinesPage() {
   const [editUnit, setEditUnit] = useState("");
   const [editType, setEditType] = useState("");
 
+  // What the company already has under the number being typed.
+  // undefined means "haven't looked"; null means "looked, nothing there".
+  const [match, setMatch] = useState<Machine | null | undefined>(undefined);
+  const [matchHolders, setMatchHolders] = useState<string[]>([]);
+  const [looking, setLooking] = useState(false);
+
+  // The fleet, for picking a machine off it instead of describing one.
+  const [fleet, setFleet] = useState<Machine[] | null>(null);
+  const [browsing, setBrowsing] = useState(false);
+
   const refresh = useCallback(async () => {
     try {
       setMachines(await listMachines(false));
@@ -49,11 +60,48 @@ export default function MachinesPage() {
     void refresh();
   }, [refresh]);
 
+  /**
+   * Look the number up while it's being typed, not when Add is pressed.
+   * The machine is already in the database with its make, model and
+   * hours; making a foreman retype all of that to find out it was there
+   * all along is the thing this avoids.
+   */
+  useEffect(() => {
+    const unit = editUnit.trim();
+    if (editId !== NEW || unit.length < 2) {
+      setMatch(undefined);
+      setMatchHolders([]);
+      return;
+    }
+    let cancelled = false;
+    setLooking(true);
+    const timer = setTimeout(() => {
+      findMachineByUnit(normalizeUnit(unit))
+        .then(async (found) => {
+          if (cancelled) return;
+          setMatch(found);
+          setMatchHolders(found ? await crewsHolding(found.id).catch(() => []) : []);
+        })
+        // Offline: say nothing rather than claim the number is free.
+        .catch(() => {
+          if (!cancelled) setMatch(undefined);
+        })
+        .finally(() => {
+          if (!cancelled) setLooking(false);
+        });
+    }, 350);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [editId, editUnit]);
+
   function startAdd() {
     setEditId(NEW);
     setEditName("");
     setEditUnit("");
     setEditType("");
+    setMatch(undefined);
     setError("");
     setInfo("");
   }
@@ -63,22 +111,55 @@ export default function MachinesPage() {
     setEditName(m.name);
     setEditUnit(m.unit_no ?? "");
     setEditType(m.machine_type ?? "");
+    setMatch(undefined);
     setError("");
     setInfo("");
   }
 
+  /** Put a machine already in the fleet onto this crew's list. */
+  async function take(m: Machine) {
+    setBusy(true);
+    setError("");
+    try {
+      await attachMachine(m.id);
+      setEditId("");
+      setBrowsing(false);
+      setInfo(`Added ${m.unit_no ?? m.name} to your list. Its hours carry over.`);
+      await refresh();
+    } catch {
+      setError("Couldn't add it — check your signal and try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function openBrowse() {
+    setBrowsing(true);
+    setError("");
+    setInfo("");
+    try {
+      setFleet(await machinesNotHeld());
+    } catch {
+      setFleet(null);
+      setError("Can't read the company fleet — no signal.");
+    }
+  }
+
   async function saveEdit() {
     const trimmed = editName.trim();
-    if (!trimmed) return;
     const unit = editUnit.trim() ? normalizeUnit(editUnit) : null;
     const details = { unit_no: unit, machine_type: editType || null };
+    // A machine already in the fleet needs no description, so the name is
+    // only required for one the company has never seen.
+    if (!trimmed && !(editId === NEW && unit)) return;
 
     setBusy(true);
     setError("");
     try {
       if (editId === NEW) {
-        // Somebody else in the company may already have this machine.
-        // Attaching to it is what keeps one hour meter per machine.
+        // Checked again here rather than trusting what the field showed:
+        // another crew may have entered it in the meantime, and attaching
+        // to it is what keeps one hour meter per machine.
         const existing = unit ? await findMachineByUnit(unit) : null;
         if (existing) {
           await attachMachine(existing.id);
@@ -87,6 +168,13 @@ export default function MachinesPage() {
             `${existing.unit_no} is already in the company fleet as "${existing.name}" — added it to your list rather than creating a second one. Its hours carry over. If this is a different machine that inherited the number, retire the old one first.`
           );
           await refresh();
+          return;
+        }
+        if (!trimmed) {
+          setError(
+            `${unit} isn't in the company fleet yet. Fill in the make and model to add it.`
+          );
+          setBusy(false);
           return;
         }
         await addMachine(trimmed, details);
@@ -161,6 +249,7 @@ export default function MachinesPage() {
 
   /** One form for both adding a machine and editing one. */
   function editor(isNew: boolean) {
+    const found = isNew ? (match ?? null) : null;
     return (
       <div className="machine-edit">
         <label htmlFor="e-unit">Unit number</label>
@@ -176,33 +265,69 @@ export default function MachinesPage() {
         />
         <p className="small muted">
           The company&apos;s number for this machine — three characters,
-          sometimes with a letter, like 741 or 871R. If the company already
-          has this number, it gets added to your list rather than created
-          again, and its hours carry over.
+          sometimes with a letter, like 741 or 871R. Type it and it looks
+          the machine up: if the company already has it, you don&apos;t
+          need to fill in anything else.
         </p>
 
-        <label htmlFor="e-name">Make and model</label>
-        <input
-          id="e-name"
-          type="text"
-          placeholder="John Deere 624R"
-          value={editName}
-          onChange={(e) => setEditName(e.target.value)}
-        />
+        {isNew && looking && <p className="small muted">Checking the fleet…</p>}
 
-        <label htmlFor="e-type">Type</label>
-        <select
-          id="e-type"
-          value={editType}
-          onChange={(e) => setEditType(e.target.value)}
-        >
-          <option value="">Choose type…</option>
-          {MACHINE_TYPES.map((t) => (
-            <option key={t.key} value={t.key}>
-              {t.label}
-            </option>
-          ))}
-        </select>
+        {isNew && found ? (
+          // Already company iron. Everything below would be ignored, so
+          // it isn't asked for.
+          <div className="notice notice-ok">
+            <div className="machine-line">
+              {found.unit_no && <span className="unit-no">{found.unit_no}</span>}
+              <span className="stat-name">{found.name}</span>
+            </div>
+            <p className="small" style={{ margin: "6px 0 0" }}>
+              {found.machine_type
+                ? `${typeLabel(found.machine_type)} · `
+                : ""}
+              {matchHolders.length
+                ? `${matchHolders.join(" and ")} ${
+                    matchHolders.length === 1 ? "has" : "have"
+                  } it`
+                : "nobody has it right now"}
+            </p>
+            <p className="small" style={{ margin: "6px 0 0" }}>
+              Already in the company fleet. Adding it puts it on your list
+              with every hour ever logged on it.
+            </p>
+          </div>
+        ) : (
+          <>
+            <label htmlFor="e-name">Make and model</label>
+            <input
+              id="e-name"
+              type="text"
+              placeholder="John Deere 624R"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+            />
+
+            <label htmlFor="e-type">Type</label>
+            <select
+              id="e-type"
+              value={editType}
+              onChange={(e) => setEditType(e.target.value)}
+            >
+              <option value="">Choose type…</option>
+              {MACHINE_TYPES.map((t) => (
+                <option key={t.key} value={t.key}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+          </>
+        )}
+
+        {isNew && !found && !looking && match === null && (
+          <p className="small muted">
+            {normalizeUnit(editUnit)} isn&apos;t in the fleet yet — filling
+            this in is what puts it there.
+          </p>
+        )}
 
         {isNew && !editUnit.trim() && (
           <p className="small muted">
@@ -215,10 +340,10 @@ export default function MachinesPage() {
         <div className="row" style={{ marginTop: 14 }}>
           <button
             className="btn btn-small"
-            disabled={busy || !editName.trim()}
+            disabled={busy || (!found && !editName.trim())}
             onClick={() => void saveEdit()}
           >
-            {isNew ? "Add machine" : "Save"}
+            {isNew ? (found ? `Add ${found.unit_no ?? found.name}` : "Add machine") : "Save"}
           </button>
           <button
             className="btn btn-small btn-secondary"
@@ -295,6 +420,59 @@ export default function MachinesPage() {
           + Add a machine
         </button>
       )}
+
+      {editId !== NEW &&
+        (browsing ? (
+          <div className="card">
+            <div className="row" style={{ justifyContent: "space-between" }}>
+              <h3 style={{ margin: 0 }}>Company fleet</h3>
+              <button className="linkish" onClick={() => setBrowsing(false)}>
+                Close
+              </button>
+            </div>
+            <p className="muted small">
+              Machines the company has that aren&apos;t on your list. Taking
+              one on brings its hours with it.
+            </p>
+            {!fleet && <p className="muted">Reading the fleet…</p>}
+            {fleet?.length === 0 && (
+              <p className="muted">
+                You already have every machine in the fleet.
+              </p>
+            )}
+            {fleet?.map((m) => (
+              <div className="list-row" key={m.id}>
+                <span className="grow">
+                  <span className="machine-line">
+                    {m.unit_no && <span className="unit-no">{m.unit_no}</span>}
+                    <span className="stat-name">{m.name}</span>
+                  </span>
+                  {m.machine_type && (
+                    <span className="machine-sub">
+                      {typeLabel(m.machine_type)}
+                    </span>
+                  )}
+                </span>
+                <div className="row-actions">
+                  <button
+                    className="btn btn-small btn-secondary"
+                    disabled={busy}
+                    onClick={() => void take(m)}
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <button
+            className="btn btn-secondary"
+            onClick={() => void openBrowse()}
+          >
+            Pick from the company fleet
+          </button>
+        ))}
 
       <h2>Active</h2>
       <div className="card">

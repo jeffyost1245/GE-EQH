@@ -11,8 +11,9 @@
 // Nothing on this screen is maintained by hand. It is hours and checkout
 // sheets, read sideways.
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import AddFleetMachine from "@/components/AddFleetMachine";
 import AppShell from "@/components/AppShell";
 import CrewBar from "@/components/CrewBar";
 import FleetBoard from "@/components/FleetBoard";
@@ -34,25 +35,31 @@ export default function FleetPage() {
   const [rows, setRows] = useState<FleetRow[] | null>(null);
   const [error, setError] = useState("");
 
-  useEffect(() => {
+  const read = useCallback(async () => {
     const since = new Date();
     since.setDate(since.getDate() - WINDOW_DAYS);
     const sinceStr = toDateString(since);
 
-    Promise.all([
-      allMachines(),
-      fleetActivity(sinceStr),
-      // No inspections yet: the board still works off hours alone, it
-      // just cannot say where anything is.
-      fleetInspections(sinceStr).catch(() => []),
-      allMachineHolders().catch(() => ({})),
-    ])
-      .then(([machines, activity, sheets, holders]) => {
-        const active = machines.filter((m) => m.status === "active");
-        setRows(buildFleet(active, activity, sheets, todayString(), holders));
-      })
-      .catch((cause) => setError(describeError(cause)));
+    try {
+      const [machines, activity, sheets, holders] = await Promise.all([
+        allMachines(),
+        fleetActivity(sinceStr),
+        // No inspections yet: the board still works off hours alone, it
+        // just cannot say where anything is.
+        fleetInspections(sinceStr).catch(() => []),
+        allMachineHolders().catch(() => ({})),
+      ]);
+      const active = machines.filter((m) => m.status === "active");
+      setRows(buildFleet(active, activity, sheets, todayString(), holders));
+      setError("");
+    } catch (cause) {
+      setError(describeError(cause));
+    }
   }, []);
+
+  useEffect(() => {
+    void read();
+  }, [read]);
 
   const untyped = (rows ?? []).filter(
     (r) => !MACHINE_TYPES.some((t) => t.key === r.machine.machine_type)
@@ -65,6 +72,8 @@ export default function FleetPage() {
       {!rows && !error && <p className="muted">Reading the fleet…</p>}
 
       {rows && <FleetBoard rows={rows} />}
+
+      {rows && <AddFleetMachine onAdded={read} />}
 
       {untyped > 0 && (
         <p className="notice">
