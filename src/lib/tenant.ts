@@ -10,7 +10,7 @@ import { CREW_COOKIE } from "./auth";
 export interface CurrentCrew {
   id: string;
   name: string;
-  role: "foreman" | "superintendent";
+  role: "foreman" | "superintendent" | "owner";
 }
 
 export function currentCrew(): CurrentCrew | null {
@@ -31,7 +31,10 @@ export function currentCrew(): CurrentCrew | null {
         return {
           id: parsed.id,
           name: parsed.name ?? "",
-          role: parsed.role === "superintendent" ? "superintendent" : "foreman",
+          role:
+            parsed.role === "superintendent" || parsed.role === "owner"
+              ? parsed.role
+              : "foreman",
         };
       }
       return null;
@@ -54,9 +57,4 @@ export function requireCrewId(): string {
   const crew = currentCrew();
   if (!crew) throw new Error("No crew selected");
   return crew.id;
-}
-
-/** True when this browser is signed in as a superintendent. */
-export function isSuperintendent(): boolean {
-  return currentCrew()?.role === "superintendent";
 }

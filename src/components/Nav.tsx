@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { isSuperintendent } from "@/lib/tenant";
+import { currentCrew } from "@/lib/tenant";
 import {
   CrewIcon,
   DashboardIcon,
@@ -29,12 +29,18 @@ const SUPER_TABS = [
   { href: "/sheets", Icon: EntriesIcon, label: "Sheets" },
 ];
 
+// The office has one screen, so the bar is really just a label — but
+// leaving it out would make the page look like it had lost its footing.
+const OWNER_TABS = [{ href: "/people", Icon: CrewIcon, label: "People" }];
+
 export default function Nav() {
   const pathname = usePathname();
   const [tabs, setTabs] = useState(CREW_TABS);
 
   useEffect(() => {
-    if (isSuperintendent()) setTabs(SUPER_TABS);
+    const role = currentCrew()?.role;
+    if (role === "superintendent") setTabs(SUPER_TABS);
+    else if (role === "owner") setTabs(OWNER_TABS);
   }, []);
 
   return (

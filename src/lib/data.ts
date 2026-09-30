@@ -10,6 +10,8 @@ import {
   MachineDetails,
   NewEntry,
   NewInspection,
+  PersonRole,
+  PersonWithCrew,
   ShareLink,
 } from "./types";
 import { deleteSheetPhoto } from "./photo";
@@ -264,6 +266,94 @@ export async function renameCrewMember(
     .from("crew")
     .update({ name })
     .eq("foreman_id", requireCrewId())
+    .eq("id", id);
+  if (error) throw error;
+}
+
+// ---------- the office: people and crews, company-wide ----------
+//
+// These are the only reads and writes that cross crew boundaries on
+// purpose. Everything else in this file is scoped to the signed-in crew;
+// the office screen is the exception, because handing out access is the
+// one job that has to see everybody.
+
+/** Every person in the company, with the crew they're on. */
+export async function allPeople(): Promise<PersonWithCrew[]> {
+  const { data, error } = await getSupabase()
+    .from("crew")
+    .select("id, name, status, created_at, employee_no, role, foreman_id, foremen(name)")
+    .order("name");
+  if (error) throw error;
+  return data as unknown as PersonWithCrew[];
+}
+
+/** Every crew, including retired ones, for the office's own list. */
+export async function allCrews(): Promise<Foreman[]> {
+  const { data, error } = await getSupabase()
+    .from("foremen")
+    .select("id, name, status, sort_order, role")
+    .order("sort_order")
+    .order("name");
+  if (error) throw error;
+  return data as unknown as Foreman[];
+}
+
+/**
+ * Who already has this number. Active people only, matching how unit
+ * numbers work: a number belonging to somebody who left can be issued
+ * again, and the app has no business disagreeing with the paperwork.
+ */
+export async function findPersonByNumber(
+  employeeNo: string,
+  exceptId?: string
+): Promise<PersonWithCrew | null> {
+  let q = getSupabase()
+    .from("crew")
+    .select("id, name, status, created_at, employee_no, role, foreman_id, foremen(name)")
+    .eq("status", "active")
+    .ilike("employee_no", employeeNo.trim());
+  if (exceptId) q = q.neq("id", exceptId);
+  const { data, error } = await q.limit(1);
+  if (error) throw error;
+  return (data?.[0] as unknown as PersonWithCrew) ?? null;
+}
+
+export interface PersonFields {
+  name: string;
+  employee_no: string | null;
+  role: PersonRole;
+  foreman_id: string;
+}
+
+export async function addPerson(fields: PersonFields): Promise<void> {
+  const { error } = await getSupabase().from("crew").insert(fields);
+  if (error) throw error;
+}
+
+/** Name, number, role, and which crew they're on — all editable together. */
+export async function updatePerson(
+  id: string,
+  fields: PersonFields
+): Promise<void> {
+  const { error } = await getSupabase()
+    .from("crew")
+    .update(fields)
+    .eq("id", id);
+  if (error) throw error;
+}
+
+/**
+ * Retiring is what takes someone's access away: the unique index on
+ * employee numbers ignores retired rows, so the number is free again
+ * and the person can no longer sign in with it.
+ */
+export async function setPersonStatus(
+  id: string,
+  status: "active" | "inactive"
+): Promise<void> {
+  const { error } = await getSupabase()
+    .from("crew")
+    .update({ status })
     .eq("id", id);
   if (error) throw error;
 }

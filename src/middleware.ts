@@ -23,6 +23,13 @@ const SUPERINTENDENT_PATHS = [
 /** Where a superintendent lands: what's free is the daily question. */
 const SUPERINTENDENT_HOME = "/fleet";
 
+// The office. Managing people and crews is all it does — it never logs
+// hours and never reads a crew's entries, so it gets one screen and no
+// more. Kept deliberately narrow: this is the login that can hand out
+// access to everyone else's.
+const OWNER_PATHS = ["/people"];
+const OWNER_HOME = "/people";
+
 export async function middleware(req: NextRequest) {
   if (!envValue("APP_PASSWORD")) {
     // Misconfigured deploy: fail closed but say why. APP_PASSWORD is the
@@ -37,6 +44,15 @@ export async function middleware(req: NextRequest) {
 
   const path = req.nextUrl.pathname;
 
+  if (session.role === "owner") {
+    const allowed = OWNER_PATHS.some(
+      (p) => path === p || path.startsWith(`${p}/`)
+    );
+    return allowed
+      ? NextResponse.next()
+      : NextResponse.redirect(new URL(OWNER_HOME, req.url));
+  }
+
   if (session.role === "superintendent") {
     const allowed = SUPERINTENDENT_PATHS.some(
       (p) => path === p || path.startsWith(`${p}/`)
@@ -46,6 +62,11 @@ export async function middleware(req: NextRequest) {
     return allowed
       ? NextResponse.next()
       : NextResponse.redirect(new URL(SUPERINTENDENT_HOME, req.url));
+  }
+
+  // Only the office reaches the office screen.
+  if (OWNER_PATHS.some((p) => path === p || path.startsWith(`${p}/`))) {
+    return NextResponse.redirect(new URL("/", req.url));
   }
 
   // Foremen have no business on the cross-crew screens.

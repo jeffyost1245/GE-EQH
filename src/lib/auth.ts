@@ -52,7 +52,7 @@ async function sign(value: string, salt: string): Promise<string> {
     .join("");
 }
 
-export type SessionRole = "foreman" | "superintendent";
+export type SessionRole = "foreman" | "superintendent" | "owner";
 
 export interface Session {
   foremanId: string;
@@ -108,7 +108,8 @@ export async function readSession(
   if (!foremanId) return null;
   return {
     foremanId,
-    role: role === "superintendent" ? "superintendent" : "foreman",
+    role:
+      role === "superintendent" || role === "owner" ? role : "foreman",
   };
 }
 
