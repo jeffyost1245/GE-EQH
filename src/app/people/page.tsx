@@ -13,6 +13,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import AppShell from "@/components/AppShell";
+import CrewBar from "@/components/CrewBar";
 import {
   addPerson,
   allCrews,
@@ -257,6 +258,7 @@ export default function PeoplePage() {
 
   return (
     <AppShell title="Office">
+      <CrewBar />
       {error && <p className="error">{error}</p>}
       {info && <p className="notice notice-ok">{info}</p>}
 
