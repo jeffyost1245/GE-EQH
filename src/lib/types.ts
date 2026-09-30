@@ -22,11 +22,27 @@ export interface MachineDetails {
   machine_type: string | null;
 }
 
+/**
+ * What a person's employee number unlocks. 'hand' is the default: log
+ * hours, fill out checkout sheets. 'foreman' adds the machine and crew
+ * screens, which the second password guards today.
+ */
+export type PersonRole = "hand" | "foreman" | "superintendent";
+
 export interface CrewMember {
   id: string;
   name: string;
   status: Status;
   created_at: string;
+  /** The company's number for this person. Null until the office fills it in. */
+  employee_no?: string | null;
+  role?: PersonRole;
+}
+
+/** A person as the office screen sees them: with the crew they're on. */
+export interface PersonWithCrew extends CrewMember {
+  foreman_id: string;
+  foremen?: { name: string } | null;
 }
 
 export interface Entry {
@@ -50,12 +66,16 @@ export interface Entry {
   updated_at: string;
 }
 
-export type Role = "foreman" | "superintendent";
+/** 'owner' is the office login: it manages people and crews, nothing else. */
+export type Role = "foreman" | "superintendent" | "owner";
 
 export interface Foreman {
   id: string;
   name: string;
   role: Role;
+  /** Only the office reads these; the login dropdown gets active crews only. */
+  status?: Status;
+  sort_order?: number;
 }
 
 export interface ShareLink {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   CREW_COOKIE,
   SESSION_COOKIE,
+  SessionRole,
   envValue,
   makeSessionCookie,
 } from "@/lib/auth";
@@ -52,8 +53,10 @@ export async function POST(req: NextRequest) {
   const record = (roster ?? []).find(
     (f: { id: string }) => f.id === foremanId
   ) as { role?: string } | undefined;
-  const role =
-    record?.role === "superintendent" ? "superintendent" : "foreman";
+  const role: SessionRole =
+    record?.role === "superintendent" || record?.role === "owner"
+      ? record.role
+      : "foreman";
 
   const res = NextResponse.json({ ok: true, role });
   const secure = process.env.NODE_ENV === "production";
