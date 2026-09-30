@@ -7,6 +7,7 @@ import CrewBar from "@/components/CrewBar";
 import WeeklySheets from "@/components/WeeklySheets";
 import { entriesForWeek, inspectionsForWeek } from "@/lib/data";
 import { flaggedItems } from "@/lib/inspection";
+import { Flash, takeFlash } from "@/lib/flash";
 import { machineLabel } from "@/lib/machineTypes";
 import {
   formatDayHeading,
@@ -115,8 +116,14 @@ export default function Dashboard() {
   const [sheets, setSheets] = useState<InspectionWithNames[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  /** A confirmation from the screen that sent us here, shown once. */
+  const [flash, setFlash] = useState<Flash | null>(null);
 
   const week = useMemo(() => weekRange(offset), [offset]);
+
+  useEffect(() => {
+    setFlash(takeFlash());
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -165,6 +172,12 @@ export default function Dashboard() {
   return (
     <AppShell title={weekLabel(offset, week)}>
       <CrewBar />
+
+      {flash && (
+        <p className={flash.kind === "ok" ? "notice notice-ok" : "notice"}>
+          {flash.text}
+        </p>
+      )}
 
       <div className="week-nav">
         <button

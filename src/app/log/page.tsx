@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import AppShell from "@/components/AppShell";
 import {
   inspectionForDay,
@@ -14,6 +14,7 @@ import {
 import { cacheGet, cacheSet } from "@/lib/cache";
 import { machineLabel } from "@/lib/machineTypes";
 import { clearDraft, saveDraft, takeDraft } from "@/lib/draft";
+import { setFlash } from "@/lib/flash";
 import { formatDate, formatHours, todayString } from "@/lib/week";
 import {
   CrewMember,
@@ -32,6 +33,7 @@ const NAME_KEY = "eqh_my_name";
 
 function LogForm() {
   const params = useSearchParams();
+  const router = useRouter();
   const resuming = params.get("resume") === "1";
 
   const [machines, setMachines] = useState<Machine[]>([]);
@@ -191,8 +193,29 @@ function LogForm() {
       needs_repair: needsRepair,
     });
     setBusy(false);
-    setSaved(result);
     clearDraft();
+
+    // The sheet round trip ends here. Someone who has just answered
+    // thirty-five questions and then saved their hours is finished, and
+    // leaving them on an empty Log Hours form reads as though the save
+    // didn't take. Send them to the dashboard, where the entry they just
+    // made is on the board. A plain entry stays put: logging the next
+    // machine is the likely next move, which is why the form keeps the
+    // name and the date.
+    if (resuming) {
+      setFlash(
+        result === "synced"
+          ? { kind: "ok", text: "✓ Checkout sheet and hours saved." }
+          : {
+              kind: "plain",
+              text: "📶 No signal — saved on this phone and will sync automatically.",
+            }
+      );
+      router.push("/");
+      return;
+    }
+
+    setSaved(result);
     // reset for the next entry, keeping name and date
     setMachineId("");
     setStartHours("");
